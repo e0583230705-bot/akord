@@ -16,7 +16,6 @@ jobs:
         with:
           node-version: '18'
       - run: npm install
-      - run: npx cap sync android
       - run: chmod +x android/gradlew
       - run: cd android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
