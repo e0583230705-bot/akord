@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">אקורד</string>
+    <string name="title_activity_main">אקורד</string>
+    <string name="package_name">com.akord.guitar</string>
+    <string name="custom_url_scheme">com.akord.guitar</string>
+</resources>

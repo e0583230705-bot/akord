@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0612">
+<title>אקורד · ללמוד גיטרה</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module">
+  // Load Pitchy (McLeod Pitch Method) and expose a detector on window for the tuner.
+  try {
+    const { PitchDetector } = await import("https://esm.sh/pitchy@4");
+    window.pitchyDetector = PitchDetector.forFloat32Array(2048);
+    console.log("Pitchy loaded ✓");
+  } catch (e) {
+    console.error("Pitchy failed to load:", e);
+    // try fallback CDN
+    try {
+      const mod = await import("https://cdn.jsdelivr.net/npm/pitchy@4/+esm");
+      window.pitchyDetector = mod.PitchDetector.forFloat32Array(2048);
+      console.log("Pitchy loaded via fallback ✓");
+    } catch (e2) {
+      console.error("Pitchy fallback also failed:", e2);
+    }
+  }
+</script>
+<style>
+  :root{
+    --bg:#0a0612; --bg2:#130b26;
+    --violet:#8b3dff; --magenta:#ff2d92; --cyan:#22e3ff;
+    --ink:#f4eeff; --muted:#9b8dc6; --dim:#6b5d92;
+    --good:#22ffa8; --gold:#ffcf4d;
+    --card:rgba(255,255,255,.045); --card2:rgba(255,255,255,.07);
+    --stroke:rgba(255,255,255,.09);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,"Segoe UI",system-ui,"Heebo","Assistant",sans-serif;
+    background:
+      radial-gradient(1100px 560px at 85% -8%, rgba(139,61,255,.22), transparent 60%),
+      radial-gradient(900px 480px at -8% 108%, rgba(34,227,255,.15), transparent 55%),
+      linear-gradient(160deg,var(--bg),var(--bg2));
+    color:var(--ink); min-height:100%; overflow-x:hidden;
+  }
+  .particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+  .particles span{position:absolute;bottom:-20px;border-radius:50%;animation:rise linear infinite;filter:blur(.5px)}
+  @keyframes rise{to{transform:translateY(-110vh) translateX(24px);opacity:0}}
+
+  /* ===== LANDING ===== */
+  #landing{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:38px 22px 60px;animation:fade .5s ease}
+  #landing.hide{display:none}
+  .lp-badge{display:inline-block;font-size:12px;letter-spacing:.5px;color:var(--cyan);border:1px solid var(--stroke);border-radius:999px;padding:6px 15px;background:var(--card);backdrop-filter:blur(8px)}
+  .lp-hero{text-align:center;padding:30px 0 10px}
+  .lp-logo{font-size:64px;line-height:1;margin-bottom:14px;filter:drop-shadow(0 8px 30px rgba(139,61,255,.5))}
+  .lp-hero h1{font-size:40px;font-weight:800;line-height:1.1;margin-bottom:14px;background:linear-gradient(95deg,var(--cyan),var(--violet) 48%,var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lp-hero .tag{font-size:17px;color:var(--ink);font-weight:600;margin-bottom:10px}
+  .lp-hero .desc{font-size:15px;color:var(--muted);line-height:1.65;max-width:430px;margin:0 auto}
+  .lp-cta{margin:26px auto 8px;display:block;width:100%;max-width:340px;border:none;cursor:pointer;padding:17px;border-radius:18px;font-size:18px;font-weight:800;color:#fff;font-family:inherit;letter-spacing:.3px;background:linear-gradient(95deg,var(--violet),var(--magenta));box-shadow:0 14px 40px rgba(255,45,146,.4);transition:transform .12s}
+  .lp-cta:active{transform:scale(.98)}
+  .lp-cta-sub{text-align:center;font-size:12px;color:var(--dim);margin-bottom:8px}
+
+  .lp-section-t{text-align:center;font-size:13px;letter-spacing:1px;color:var(--cyan);font-weight:700;text-transform:uppercase;margin:46px 0 18px}
+  .lp-feats{display:grid;gap:14px}
+  .lp-feat{display:flex;align-items:flex-start;gap:15px;background:var(--card);border:1px solid var(--stroke);border-radius:20px;padding:18px;backdrop-filter:blur(12px)}
+  .lp-feat .ic{width:48px;height:48px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px}
+  .lp-feat h3{font-size:16px;font-weight:800;margin-bottom:4px}
+  .lp-feat p{font-size:13.5px;color:var(--muted);line-height:1.55}
+
+  .lp-steps{display:grid;gap:12px;counter-reset:step}
+  .lp-step{display:flex;align-items:center;gap:15px;background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:16px;backdrop-filter:blur(10px)}
+  .lp-step .num{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;background:linear-gradient(135deg,var(--violet),var(--cyan))}
+  .lp-step b{font-size:15px;display:block;margin-bottom:2px}
+  .lp-step small{font-size:13px;color:var(--muted);line-height:1.5}
+
+  .lp-stats{display:flex;gap:12px;margin-top:18px}
+  .lp-stat{flex:1;text-align:center;background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:18px 8px;backdrop-filter:blur(10px)}
+  .lp-stat b{display:block;font-size:26px;font-weight:800;background:linear-gradient(95deg,var(--cyan),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lp-stat small{font-size:12px;color:var(--muted);margin-top:4px;display:block}
+
+  .lp-final{text-align:center;margin-top:46px;padding:32px 22px;background:linear-gradient(135deg,rgba(139,61,255,.15),rgba(34,227,255,.1));border:1px solid var(--stroke);border-radius:24px}
+  .lp-final h2{font-size:24px;font-weight:800;margin-bottom:10px}
+  .lp-final p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:6px}
+  .lp-foot{text-align:center;color:var(--dim);font-size:11px;margin-top:30px}
+
+  /* ===== AUTH ===== */
+  #auth{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:22px;
+    background:radial-gradient(900px 500px at 80% -10%,rgba(139,61,255,.25),transparent 60%),radial-gradient(700px 400px at -10% 110%,rgba(34,227,255,.16),transparent 55%),linear-gradient(160deg,var(--bg),var(--bg2));overflow-y:auto}
+  #auth.show{display:flex}
+  .auth-card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--stroke);border-radius:26px;padding:30px 24px;backdrop-filter:blur(16px);box-shadow:0 24px 70px rgba(0,0,0,.5)}
+  .auth-logo{text-align:center;font-size:46px;margin-bottom:8px;filter:drop-shadow(0 6px 24px rgba(139,61,255,.5))}
+  .auth-card h2{text-align:center;font-size:24px;font-weight:800;margin-bottom:6px;background:linear-gradient(95deg,var(--cyan),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .auth-card .sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:22px;line-height:1.5}
+  .auth-field{margin-bottom:14px}
+  .auth-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  .auth-field input{width:100%;font-family:inherit;font-size:15px;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--stroke);border-radius:13px;padding:13px 15px;outline:none;direction:ltr;text-align:right}
+  .auth-field input:focus{border-color:var(--violet)}
+  .auth-btn{width:100%;border:none;cursor:pointer;padding:15px;border-radius:14px;font-size:16px;font-weight:800;color:#fff;font-family:inherit;background:linear-gradient(95deg,var(--violet),var(--magenta));box-shadow:0 10px 28px rgba(255,45,146,.35);transition:transform .12s,opacity .2s;margin-top:4px}
+  .auth-btn:active{transform:scale(.98)}
+  .auth-btn:disabled{opacity:.6;cursor:default}
+  .auth-google{width:100%;border:1px solid var(--stroke);cursor:pointer;padding:14px;border-radius:14px;font-size:15px;font-weight:700;color:var(--ink);font-family:inherit;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;transition:.15s}
+  .auth-google:active{transform:scale(.98)}
+  .auth-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--dim);font-size:12px}
+  .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--stroke)}
+  .auth-switch{text-align:center;margin-top:18px;font-size:13px;color:var(--muted)}
+  .auth-switch a{color:var(--cyan);font-weight:700;cursor:pointer;text-decoration:none}
+  .auth-msg{text-align:center;font-size:13px;margin-top:14px;min-height:18px;line-height:1.5}
+  .auth-msg.err{color:#ff6b8a}
+  .auth-msg.ok{color:var(--good)}
+  .auth-skip{text-align:center;margin-top:16px}
+  .auth-skip a{color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline}
+
+  /* ===== LESSON SCREEN ===== */
+  .lesson-back{background:var(--card);border:1px solid var(--stroke);color:var(--cyan);font-family:inherit;font-size:13px;font-weight:700;padding:9px 16px;border-radius:999px;cursor:pointer;margin-bottom:18px}
+  .lesson-hero{text-align:center;margin-bottom:22px}
+  .lesson-num-big{width:56px;height:56px;border-radius:16px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--violet),var(--magenta));box-shadow:0 10px 28px rgba(255,45,146,.35)}
+  .lesson-hero h1{font-size:25px;font-weight:800;margin-bottom:10px;line-height:1.2}
+  .lesson-goal{font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:11px 15px;line-height:1.5;margin-bottom:10px}
+  .lesson-meta{font-size:12.5px;color:var(--muted)}
+  .lesson-chord-box{background:var(--card);border:1px solid var(--stroke);border-radius:22px;padding:22px;text-align:center;margin-bottom:22px;backdrop-filter:blur(12px)}
+  .lesson-chord-title{font-size:20px;font-weight:800;margin-bottom:14px;background:linear-gradient(95deg,var(--cyan),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lesson-chord-svg{display:flex;justify-content:center;margin-bottom:12px}
+  .lesson-chord-hint{font-size:12px;color:var(--muted);line-height:1.5}
+  .lesson-section{background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:18px;margin-bottom:14px;backdrop-filter:blur(10px)}
+  .lesson-section h3{font-size:16px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+  .ls-dot{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;background:linear-gradient(135deg,var(--violet),var(--cyan))}
+  .lesson-section p{font-size:14px;color:var(--muted);line-height:1.65}
+  .lesson-practice-cta{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(34,227,255,.12),rgba(139,61,255,.1));border:1px solid var(--stroke);border-radius:18px;padding:16px;margin-bottom:14px}
+  .lesson-practice-cta .lp-icon{font-size:28px}
+  .lesson-practice-cta b{font-size:15px;display:block;margin-bottom:3px}
+  .lesson-practice-cta p{font-size:12.5px;color:var(--muted);line-height:1.45}
+  .lesson-practice-cta button{border:none;background:linear-gradient(95deg,var(--cyan),var(--violet));color:#fff;font-family:inherit;font-weight:800;font-size:13px;padding:11px 18px;border-radius:12px;cursor:pointer;white-space:nowrap}
+  .lesson-coach{background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:18px;margin-bottom:18px}
+  .lc-head{font-size:14px;font-weight:700;margin-bottom:12px}
+  .lc-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .lc-chips button{font-family:inherit;font-size:12px;color:var(--ink);background:rgba(255,255,255,.05);border:1px solid var(--stroke);padding:9px 13px;border-radius:999px;cursor:pointer}
+  .lesson-complete-btn{width:100%;border:none;cursor:pointer;padding:16px;border-radius:16px;font-size:16px;font-weight:800;color:#fff;font-family:inherit;background:linear-gradient(95deg,var(--violet),var(--magenta));box-shadow:0 12px 30px rgba(255,45,146,.35);margin-bottom:10px}
+  .lesson-complete-btn.done{background:linear-gradient(95deg,#1a7a55,var(--good));box-shadow:0 12px 30px rgba(34,255,168,.25)}
+
+  /* ===== SONG SCREEN ===== */
+  .song-hero{border-radius:24px;padding:30px 20px;text-align:center;margin-bottom:20px;color:#0a0612}
+  .song-hero-em{font-size:52px;line-height:1;margin-bottom:10px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.3))}
+  .song-hero h1{font-size:28px;font-weight:800;margin-bottom:6px;color:#0a0612}
+  .song-hero p{font-size:13px;color:rgba(10,6,18,.75);font-weight:600}
+  .song-chords{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  .song-chord{background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:14px 10px;text-align:center;backdrop-filter:blur(10px)}
+  .song-chord-name{font-size:18px;font-weight:800;margin-bottom:8px;background:linear-gradient(95deg,var(--cyan),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .song-seq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:18px;justify-content:center;backdrop-filter:blur(10px)}
+  .seq-chord{font-size:16px;font-weight:800;color:var(--ink);background:rgba(139,61,255,.18);border:1px solid var(--stroke);padding:8px 14px;border-radius:10px}
+  .seq-arrow{color:var(--dim);font-size:14px}
+  .song-practice-btn{width:100%;border:none;cursor:pointer;padding:16px;border-radius:16px;font-size:17px;font-weight:800;color:#fff;font-family:inherit;margin-top:20px;background:linear-gradient(95deg,var(--cyan),var(--violet));box-shadow:0 12px 30px rgba(34,227,255,.3)}
+
+  /* ===== Lyrics with inline chords ===== */
+  .song-lyrics{background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:20px 18px;backdrop-filter:blur(10px)}
+  .ly-line{margin-bottom:16px}
+  .ly-line:last-child{margin-bottom:0}
+  .ly-chords{display:flex;gap:18px;margin-bottom:2px;min-height:22px}
+  .ly-chord{font-size:15px;font-weight:800;color:var(--cyan);letter-spacing:.5px}
+  .ly-text{font-size:18px;color:var(--ink);line-height:1.5;font-weight:500}
+  .ly-spacer{height:14px}
+
+  /* ===== SONG PLAY (practice mode) ===== */
+  .songplay-current{background:var(--card);border:1px solid var(--stroke);border-radius:24px;padding:26px 20px;text-align:center;margin:20px 0;backdrop-filter:blur(12px)}
+  .songplay-chord-name{font-size:56px;font-weight:800;background:linear-gradient(95deg,var(--cyan),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+  .songplay-next{font-size:15px;color:var(--muted);margin-top:10px}
+  .songplay-next b{color:var(--cyan)}
+  .songplay-bar{height:8px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;margin:16px 0}
+  .songplay-bar-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--magenta));border-radius:8px;transition:width .3s}
+  .songplay-nav{display:flex;gap:12px;margin-top:18px}
+  .songplay-nav button{flex:1;border:1px solid var(--stroke);background:var(--card);color:var(--ink);font-family:inherit;font-weight:800;font-size:16px;padding:15px;border-radius:14px;cursor:pointer}
+  .songplay-nav button.primary{border:none;background:linear-gradient(95deg,var(--violet),var(--magenta));color:#fff;box-shadow:0 10px 24px rgba(255,45,146,.3)}
+
+  /* ===== TUNER ===== */
+  .tuner-meter{position:relative;height:56px;margin:18px 6px 4px}
+  .tm-track{position:absolute;top:50%;left:0;right:0;height:3px;transform:translateY(-50%);background:linear-gradient(90deg,var(--bad),#3a2a55 35%,#3a2a55 65%,var(--bad));border-radius:3px}
+  .tm-center{position:absolute;top:6px;bottom:6px;left:50%;width:2px;transform:translateX(-50%);background:var(--good);border-radius:2px;box-shadow:0 0 10px var(--good)}
+  .tm-needle{position:absolute;top:0;bottom:0;left:50%;width:5px;border-radius:5px;background:var(--ink);transform:translateX(-50%);transition:left .08s ease-out, background .15s;box-shadow:0 0 14px rgba(255,255,255,.6)}
+  .tuner-pill{display:inline-block;margin-top:4px;font-size:13px;font-weight:700;padding:6px 16px;border-radius:999px;border:1px solid var(--stroke);background:rgba(0,0,0,.25);min-height:28px;color:var(--muted)}
+  .string-select{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .str-pick{font-family:inherit;background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:14px 4px;text-align:center;transition:.18s;cursor:pointer;color:var(--ink)}
+  .str-pick b{display:block;font-size:20px;font-weight:800}
+  .str-pick small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+  .str-pick.active{border-color:var(--violet);background:linear-gradient(135deg,rgba(139,61,255,.25),rgba(255,45,146,.15));box-shadow:0 0 20px rgba(139,61,255,.35);transform:translateY(-2px)}
+  .str-pick.active b{color:#fff}
+
+  /* ===== YouTube demo button ===== */
+  .yt-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding:13px;border-radius:14px;font-size:14px;font-weight:700;color:#fff;font-family:inherit;text-decoration:none;background:linear-gradient(95deg,#ff0033,#cc0000);box-shadow:0 8px 22px rgba(255,0,51,.3);transition:transform .12s}
+  .yt-btn:active{transform:scale(.98)}
+  .yt-btn.standalone{margin:18px 0 0}
+
+  /* ===== Play chord button ===== */
+  .play-chord-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;padding:13px;border-radius:14px;font-size:15px;font-weight:800;color:#fff;font-family:inherit;cursor:pointer;border:none;background:linear-gradient(95deg,var(--good),#12b886);box-shadow:0 8px 22px rgba(34,255,168,.3);transition:transform .12s}
+  .play-chord-btn:active{transform:scale(.97)}
+  .song-chord-play{font-size:11px;color:var(--good);font-weight:700;margin-top:6px}
+
+  .app{position:relative;z-index:1;max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:84px}
+  .view{display:none;padding:24px 18px 10px;animation:fade .35s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .brand{font-size:24px;font-weight:800;background:linear-gradient(95deg,var(--cyan),var(--violet) 50%,var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .streak{font-size:13px;font-weight:700;color:var(--gold);background:var(--card);border:1px solid var(--stroke);padding:6px 12px;border-radius:999px}
+  .hello{color:var(--muted);font-size:14px;margin-bottom:20px}
+
+  .hero-card{background:var(--card);border:1px solid var(--stroke);border-radius:24px;padding:20px;backdrop-filter:blur(14px);display:flex;align-items:center;gap:18px;box-shadow:0 16px 44px rgba(0,0,0,.35)}
+  .ring{position:relative;width:78px;height:78px;flex-shrink:0}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+  .hero-card h3{font-size:16px;margin-bottom:4px}
+  .hero-card p{color:var(--muted);font-size:13px;line-height:1.5}
+
+  .section-label{font-size:12px;letter-spacing:1px;color:var(--cyan);font-weight:700;margin:26px 4px 12px;text-transform:uppercase}
+
+  .lesson{display:flex;align-items:center;gap:14px;margin-bottom:10px;background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:14px;backdrop-filter:blur(10px);transition:.18s;cursor:pointer}
+  .lesson:active{transform:scale(.99)}
+  .lesson.done{border-color:rgba(34,255,168,.3)}
+  .lesson.locked{opacity:.5}
+  .l-num{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex-shrink:0;background:linear-gradient(135deg,var(--violet),var(--magenta));box-shadow:0 6px 18px rgba(255,45,146,.3)}
+  .lesson.done .l-num{background:linear-gradient(135deg,#1a7a55,var(--good));box-shadow:0 6px 18px rgba(34,255,168,.25)}
+  .lesson.locked .l-num{background:#2a2142;box-shadow:none}
+  .l-body{flex:1;min-width:0}
+  .l-body b{font-size:15px;display:block}
+  .l-body small{color:var(--muted);font-size:12px;display:block;margin-top:2px}
+  .l-tag{font-size:11px;color:var(--dim)}
+  .chev{color:var(--dim);font-size:18px}
+
+  .chord-wrap{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:6px}
+  .chord{background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:14px 12px 12px;width:128px;text-align:center;backdrop-filter:blur(10px)}
+  .chord h4{font-size:18px;font-weight:800;margin-bottom:2px}
+  .chord .he{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .fret{position:relative;width:84px;height:96px;margin:0 auto}
+
+  .song{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--stroke);border-radius:18px;padding:13px;margin-bottom:10px;backdrop-filter:blur(10px);transition:.18s;cursor:pointer}
+  .song:active{transform:scale(.99)}
+  .cover{width:50px;height:50px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#0a0612}
+  .song-body{flex:1;min-width:0}
+  .song-body b{font-size:15px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .song-body small{color:var(--muted);font-size:12px}
+  .diff{font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .d1{background:rgba(34,255,168,.15);color:var(--good)}
+  .d2{background:rgba(34,227,255,.15);color:var(--cyan)}
+  .d3{background:rgba(255,45,146,.15);color:var(--magenta)}
+
+  .coach-head{text-align:center;margin-bottom:18px}
+  .coach-av{width:64px;height:64px;border-radius:20px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:30px;background:linear-gradient(135deg,var(--violet),var(--cyan));box-shadow:0 10px 30px rgba(139,61,255,.4)}
+  .chat{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+  .msg{max-width:84%;padding:12px 15px;border-radius:18px;font-size:14px;line-height:1.55;white-space:pre-wrap}
+  .msg.bot{align-self:flex-start;background:var(--card2);border:1px solid var(--stroke);border-bottom-right-radius:6px}
+  .msg.me{align-self:flex-end;background:linear-gradient(95deg,var(--violet),var(--magenta));border-bottom-left-radius:6px;color:#fff}
+  .typing{display:flex;gap:5px;align-items:center}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;animation:blink 1s infinite}
+  @keyframes blink{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+  .quick{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .quick button{font-family:inherit;font-size:12.5px;color:var(--ink);background:var(--card);border:1px solid var(--stroke);padding:9px 13px;border-radius:999px;cursor:pointer;transition:.15s}
+  .quick button:active{transform:scale(.96);border-color:var(--cyan)}
+  .composer{display:flex;gap:8px}
+  .composer input{flex:1;font-family:inherit;font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--stroke);border-radius:14px;padding:13px 15px;outline:none}
+  .composer input:focus{border-color:var(--violet)}
+  .composer button{border:none;background:linear-gradient(95deg,var(--violet),var(--magenta));color:#fff;width:48px;border-radius:14px;font-size:18px;cursor:pointer}
+  .ai-note{font-size:11px;color:var(--dim);text-align:center;margin-top:10px;line-height:1.5}
+
+  .nav{position:fixed;bottom:0;left:0;right:0;z-index:5;max-width:520px;margin:0 auto;display:flex;background:rgba(12,7,24,.85);backdrop-filter:blur(18px);border-top:1px solid var(--stroke)}
+  .nav button{flex:1;background:none;border:none;color:var(--dim);font-family:inherit;font-size:11px;font-weight:600;padding:11px 4px 14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:.18s}
+  .nav button .ic{font-size:21px;line-height:1}
+  .nav button.active{color:var(--ink)}
+  .nav button.active .ic{filter:drop-shadow(0 0 10px var(--violet))}
+
+  .practice-cta{margin:18px 0 8px;width:100%;border:none;cursor:pointer;padding:16px;border-radius:16px;font-size:16px;font-weight:800;color:#fff;font-family:inherit;background:linear-gradient(95deg,var(--cyan),var(--violet));box-shadow:0 12px 30px rgba(34,227,255,.25)}
+  .ach-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;margin-top:4px}
+  .ach{flex-shrink:0;width:84px;text-align:center;background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:14px 6px}
+  .ach .em{font-size:26px}
+  .ach small{display:block;font-size:10px;color:var(--muted);margin-top:5px;line-height:1.3}
+  .ach.lock{opacity:.4}
+
+  /* ===== ANDROID SAFE AREA (Capacitor) ===== */
+  body { padding-top: env(safe-area-inset-top); }
+  .nav {
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+    height: auto;
+  }
+  .app { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body>
+<div class="particles" id="particles"></div>
+
+<!-- ===================== LANDING PAGE ===================== -->
+<div id="landing">
+  <div style="text-align:center"><span class="lp-badge">🎸 לימוד גיטרה בעברית · עם מאמן AI</span></div>
+
+  <div class="lp-hero">
+    <div class="lp-logo">🎸</div>
+    <h1>אקורד</h1>
+    <div class="tag">ללמוד גיטרה מאפס — בעברית, בקצב שלך.</div>
+    <p class="desc">שיעורים מובנים שלב-אחר-שלב, שירים ישראליים אמיתיים, ומאמן AI חכם שעונה על כל שאלה בעברית. הכל במקום אחד, ישר מהטלפון.</p>
+  </div>
+
+  <button class="lp-cta" onclick="enterApp()">התחל ללמוד עכשיו →</button>
+  <div class="lp-cta-sub">חינם · בלי הרשמה · מתחילים תוך 30 שניות</div>
+
+  <!-- WHY / FEATURES -->
+  <div class="lp-section-t">למה אקורד?</div>
+  <div class="lp-feats">
+    <div class="lp-feat">
+      <div class="ic" style="background:linear-gradient(135deg,#8b3dff,#ff2d92)">📚</div>
+      <div><h3>מסלול לימוד ברור</h3><p>מהאקורד הראשון ועד שיר מלא — שיעורים מסודרים שנפתחים בהדרגה, בלי לאבד את הדרך. כל שלב בנוי על הקודם.</p></div>
+    </div>
+    <div class="lp-feat">
+      <div class="ic" style="background:linear-gradient(135deg,#22e3ff,#8b3dff)">🎵</div>
+      <div><h3>שירים שאתה מכיר ואוהב</h3><p>תרגל על שירים ישראליים אמיתיים עם אקורדים מסונכרנים. ללמוד נהיה כיף כשמנגנים שיר שמתחשק לשיר.</p></div>
+    </div>
+    <div class="lp-feat">
+      <div class="ic" style="background:linear-gradient(135deg,#ff2d92,#ffcf4d)">🤖</div>
+      <div><h3>מאמן AI אישי בעברית</h3><p>תקוע באקורד? לא מבין מושג? שאל את המאמן בעברית וקבל תשובה מיידית, מותאמת בדיוק לרמה שלך.</p></div>
+    </div>
+    <div class="lp-feat">
+      <div class="ic" style="background:linear-gradient(135deg,#22ffa8,#22e3ff)">🎙️</div>
+      <div><h3>פידבק חי על הנגינה</h3><p>נגן מול המיקרופון והאפליקציה תזהה אם הצליל נכון — בזמן אמת, ישירות במכשיר שלך.</p></div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="lp-section-t">איך זה עובד</div>
+  <div class="lp-steps">
+    <div class="lp-step"><div class="num">1</div><div><b>בוחרים שיעור</b><small>מתחילים מההתחלה או ממשיכים מאיפה שעצרתם.</small></div></div>
+    <div class="lp-step"><div class="num">2</div><div><b>לומדים ומתרגלים</b><small>צופים, מנגנים, ומקבלים פידבק חי על הצליל.</small></div></div>
+    <div class="lp-step"><div class="num">3</div><div><b>שואלים את המאמן</b><small>כל שאלה, בכל רגע — תשובה חכמה בעברית.</small></div></div>
+    <div class="lp-step"><div class="num">4</div><div><b>מנגנים שיר שלם</b><small>אוספים נקודות, שומרים רצף, ומתקדמים.</small></div></div>
+  </div>
+
+  <div class="lp-stats">
+    <div class="lp-stat"><b>11</b><small>שיעורים מובנים</small></div>
+    <div class="lp-stat"><b>∞</b><small>שאלות למאמן</small></div>
+    <div class="lp-stat"><b>100%</b><small>בעברית</small></div>
+  </div>
+
+  <!-- FINAL CTA -->
+  <div class="lp-final">
+    <h2>הגיטרה מחכה לך 🎸</h2>
+    <p>בלי שיעורים יקרים, בלי לוח זמנים קבוע.</p>
+    <p>רק אתה, הגיטרה, והמאמן שתמיד זמין.</p>
+    <button class="lp-cta" style="margin-top:18px" onclick="enterApp()">בוא נתחיל →</button>
+  </div>
+
+  <div class="lp-foot">אקורד · לימוד גיטרה בעברית</div>
+</div>
+
+<!-- ===================== AUTH SCREEN ===================== -->
+<div id="auth">
+  <div class="auth-card">
+    <div class="auth-logo">🎸</div>
+    <h2 id="authTitle">התחברות</h2>
+    <p class="sub" id="authSub">התחבר כדי לשמור את ההתקדמות שלך</p>
+
+    <div class="auth-field">
+      <label>אימייל</label>
+      <input type="email" id="authEmail" placeholder="כתובת המייל שלך" autocomplete="email">
+    </div>
+    <div class="auth-field">
+      <label>סיסמה</label>
+      <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="auth-btn" id="authBtn" onclick="doAuth()">התחבר</button>
+
+    <div class="auth-divider">או</div>
+    <button class="auth-google" onclick="doGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.02-3.7H.96v2.34A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.98 10.72a5.4 5.4 0 0 1 0-3.44V4.94H.96a9 9 0 0 0 0 8.12l3.02-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.94l3.02 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+      התחבר עם Google
+    </button>
+
+    <div class="auth-msg" id="authMsg"></div>
+
+    <div class="auth-switch">
+      <span id="authSwitchText">אין לך חשבון?</span>
+      <a onclick="toggleAuthMode()" id="authSwitchLink">הירשם</a>
+    </div>
+
+    <div class="auth-skip"><a onclick="enterApp()">המשך בלי התחברות (התקדמות לא תישמר)</a></div>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+
+
+
+
+  <!-- LEARN -->
+  <section class="view active" id="v-learn">
+    <div class="top"><div class="brand">אקורד</div><div style="display:flex;gap:8px;align-items:center"><button onclick="backToLanding()" style="background:var(--card);border:1px solid var(--stroke);color:var(--muted);font-family:inherit;font-size:12px;padding:6px 12px;border-radius:999px;cursor:pointer">ℹ️</button><button onclick="doLogout()" id="logoutBtn" style="background:var(--card);border:1px solid var(--stroke);color:var(--muted);font-family:inherit;font-size:12px;padding:6px 12px;border-radius:999px;cursor:pointer;display:none">יציאה</button><div class="streak" id="streakBadge">🔥 0 ימים</div></div></div>
+    <div class="hello" id="learnHello">ברוך הבא! בוא נתחיל ללמוד גיטרה 🎸</div>
+
+    <div class="hero-card">
+      <div class="ring">
+        <svg width="78" height="78">
+          <circle cx="39" cy="39" r="32" stroke="rgba(255,255,255,.08)" stroke-width="7" fill="none"/>
+          <circle cx="39" cy="39" r="32" stroke="url(#g)" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" id="progRing"/>
+          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22e3ff"/><stop offset="1" stop-color="#ff2d92"/></linearGradient></defs>
+        </svg>
+        <div class="pct" id="progPct">0%</div>
+      </div>
+      <div><h3>מסלול מתחילים</h3><p><span id="progText">סיימת 0 מתוך 11 שיעורים.</span> <span id="progNext">השלב הבא: היכרות עם הגיטרה.</span></p></div>
+    </div>
+
+    <div class="section-label">מסלול הלימוד</div>
+    <div class="path" id="lessonList"></div>
+
+    <div class="section-label" id="chordsLabel">אקורדים שלמדת</div>
+    <div class="chord-wrap" id="chords"></div>
+
+    <div class="section-label">ההישגים שלך</div>
+    <div class="ach-row" id="achRow"></div>
+  </section>
+
+  <!-- LESSON (inner screen) -->
+  <section class="view" id="v-lesson">
+    <div id="lessonContent"></div>
+  </section>
+
+  <!-- SONG (inner screen) -->
+  <section class="view" id="v-song">
+    <div id="songContent"></div>
+  </section>
+
+  <!-- SONG PLAY (practice mode) -->
+  <section class="view" id="v-songplay">
+    <div id="songPlayContent"></div>
+  </section>
+
+  <!-- SONGS -->
+  <section class="view" id="v-songs">
+    <div class="top"><div class="brand">שירים</div><div class="streak">🎼 ספרייה</div></div>
+    <div class="hello">שירים מסורתיים ופיוטים — עם מילים ואקורדים מלאים ללימוד.</div>
+
+    <div class="lp-feat" style="margin-bottom:18px;padding:14px">
+      <div class="ic" style="background:linear-gradient(135deg,#22e3ff,#8b3dff);width:40px;height:40px;font-size:20px">🎸</div>
+      <div><p style="font-size:13px;color:var(--muted);line-height:1.55;margin:0">כל שיר מוצג עם <b style="color:var(--ink)">המילים והאקורדים צמודים</b> — האקורד מעל המילה המדויקת. לחצו על שיר כדי ללמוד אותו.</p></div>
+    </div>
+
+    <div id="songsPD"></div>
+
+    <div class="ai-note">כל השירים כאן הם נחלת הכלל — פיוטים ושירים מסורתיים שמותר ללמוד וללמד במלואם.</div>
+  </section>
+
+  <!-- PRACTICE (tuner + chord) -->
+  <section class="view" id="v-practice">
+    <div class="top"><div class="brand">כיוון הגיטרה</div><div class="streak">🎸 טיונר</div></div>
+
+    <div class="hello" style="text-align:center">בחרו מיתר, פרטו אותו, וכוונו לפי המחוג.</div>
+
+    <!-- string selector -->
+    <div class="section-label">בחרו מיתר לכיוון</div>
+    <div class="string-select" id="stringSelect"></div>
+
+    <!-- tuner display -->
+    <div class="hero-card" style="flex-direction:column;text-align:center;gap:6px;padding:24px 20px;margin-top:16px">
+      <div style="font-size:13px;color:var(--cyan);font-weight:700" id="tTarget">בחרו מיתר למעלה</div>
+      <div style="font-size:64px;font-weight:800;line-height:1" id="tNote">–</div>
+      <div style="font-size:14px;color:var(--muted);height:20px" id="tNoteName"></div>
+
+      <div class="tuner-meter">
+        <div class="tm-track"></div>
+        <div class="tm-center"></div>
+        <div class="tm-needle" id="tNeedle"></div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);height:16px" id="tCents"></div>
+      <div class="tuner-pill" id="tPill">בחרו מיתר והפעילו מיקרופון</div>
+
+      <button class="practice-cta" id="tToggle" style="margin:10px 0 0">🎙️ הפעל מיקרופון</button>
+      <div style="font-size:11px;color:var(--dim)" id="tErr"></div>
+    </div>
+
+    <div class="ai-note">בחרו את המיתר שאתם מכוונים — כך אין בלבול בין מיתרים. סובבו את הבורג עד שהמחוג במרכז והפס ירוק. ההאזנה במכשיר שלכם בלבד.</div>
+
+    <div class="section-label">טיפ</div>
+    <div class="msg bot" style="max-width:100%">אם מיתר נמוך מדי (המחוג שמאלה) — הדקו את הבורג בעדינות. אם גבוה מדי (ימינה) — שחררו. כוונו לאט, ובדקו שוב אחרי כל מיתר כי הם משפיעים זה על זה.</div>
+  </section>
+  </section>
+
+  <!-- COACH -->
+  <section class="view" id="v-coach">
+    <div class="coach-head">
+      <div class="coach-av">🤖</div>
+      <div class="brand" style="font-size:20px">המאמן שלך</div>
+      <div class="hello" style="margin:6px 0 0">שואל אותי כל דבר על גיטרה — בעברית.</div>
+    </div>
+    <div class="chat" id="chat">
+      <div class="msg bot">היי! אני המאמן האישי שלך לגיטרה. אפשר לשאול אותי כל דבר — איך מנגנים אקורד, איך עוברים בין אקורדים, מה כדאי לתרגל, או לבקש הסבר על שיר. במה נתחיל?</div>
+    </div>
+    <div class="quick" id="quick">
+      <button onclick="ask('איך עוברים מהר בין G ל-Em?')">מעבר G↔Em</button>
+      <button onclick="ask('למה האצבעות שלי כואבות בנגינה?')">כאב באצבעות</button>
+      <button onclick="ask('מה כדאי לי לתרגל היום כמתחיל?')">מה לתרגל היום</button>
+      <button onclick="ask('הסבר לי מה זה קאפו ומתי משתמשים בו')">מה זה קאפו</button>
+    </div>
+    <div class="composer">
+      <input id="chatIn" placeholder="כתוב שאלה למאמן…" onkeydown="if(event.key==='Enter')sendChat()">
+      <button onclick="sendChat()">➤</button>
+    </div>
+    <div class="ai-note">המאמן מחובר ל-Claude דרך שרת מאובטח. שום מפתח לא חשוף בדפדפן.</div>
+  </section>
+
+  <nav class="nav">
+    <button class="active" data-v="learn" onclick="go('learn')"><span class="ic">📚</span>למידה</button>
+    <button data-v="songs" onclick="go('songs')"><span class="ic">🎵</span>שירים</button>
+    <button data-v="practice" onclick="go('practice')"><span class="ic">🎙️</span>תרגול</button>
+    <button data-v="coach" onclick="go('coach')"><span class="ic">🤖</span>מאמן</button>
+  </nav>
+</div>
+
+<script>
+/* ===== landing -> app ===== */
+function enterApp(){
+  document.getElementById('landing').classList.add('hide');
+  document.getElementById('app').style.display='block';
+  window.scrollTo(0,0);
+}
+function backToLanding(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('landing').classList.remove('hide');
+  window.scrollTo(0,0);
+}
+
+/* ====================================================================
+   SUPABASE — הכנס כאן את הפרטים מהפרויקט שלך (שלב 2 במדריך ההקמה)
+   ==================================================================== */
+const SUPABASE_URL = "https://xqefepfaipnepzbvocer.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_vY-7KgpnQf0GDh-QjMZ2tg_XfnRkAI2";
+
+/* ====================================================================
+   COACH API — עדכן לכתובת ה-Netlify שלך לפני בנייה לאנדרואיד
+   ==================================================================== */
+const COACH_API_URL = window.Capacitor
+  ? "https://YOUR-NETLIFY-SITE.netlify.app/api/coach"
+  : "/api/coach";
+
+let sb = null;
+let currentUser = null;
+let profile = null;
+
+function initSupabase(){
+  const urlOk = SUPABASE_URL.startsWith("http") && !SUPABASE_URL.includes("כאן");
+  const keyOk = (SUPABASE_ANON_KEY.startsWith("ey") || SUPABASE_ANON_KEY.startsWith("sb_")) && !SUPABASE_ANON_KEY.includes("כאן");
+  if(urlOk && keyOk){
+    try{ sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); return true; }
+    catch(e){ console.error("Supabase init failed:", e); return false; }
+  }
+  console.warn("Supabase לא הוגדר — האפליקציה תרוץ במצב אורח.");
+  return false;
+}
+
+/* ===== זרימת מסכים ===== */
+function showLanding(){
+  document.getElementById('landing').classList.remove('hide');
+  document.getElementById('auth').classList.remove('show');
+  document.getElementById('app').style.display='none';
+  window.scrollTo(0,0);
+}
+function showAuth(){
+  document.getElementById('landing').classList.add('hide');
+  document.getElementById('auth').classList.add('show');
+  document.getElementById('app').style.display='none';
+  window.scrollTo(0,0);
+}
+function enterApp(){
+  document.getElementById('landing').classList.add('hide');
+  document.getElementById('auth').classList.remove('show');
+  document.getElementById('app').style.display='block';
+  const lo=document.getElementById('logoutBtn');
+  if(lo) lo.style.display = currentUser ? 'block' : 'none';
+  window.scrollTo(0,0);
+}
+function backToLanding(){ showLanding(); }
+function startFromLanding(){ if(sb){ showAuth(); } else { enterApp(); } }
+
+/* ===== מצב התחברות/הרשמה ===== */
+let authMode = 'login';
+function toggleAuthMode(){
+  authMode = authMode==='login' ? 'signup' : 'login';
+  document.getElementById('authTitle').textContent = authMode==='login' ? 'התחברות' : 'הרשמה';
+  document.getElementById('authSub').textContent = authMode==='login' ? 'התחבר כדי לשמור את ההתקדמות שלך' : 'צור חשבון חדש להתחלת המסע';
+  document.getElementById('authBtn').textContent = authMode==='login' ? 'התחבר' : 'הירשם';
+  document.getElementById('authSwitchText').textContent = authMode==='login' ? 'אין לך חשבון?' : 'כבר יש לך חשבון?';
+  document.getElementById('authSwitchLink').textContent = authMode==='login' ? 'הירשם' : 'התחבר';
+  setAuthMsg('','');
+}
+function setAuthMsg(text,type){
+  const m=document.getElementById('authMsg'); m.textContent=text; m.className='auth-msg'+(type?' '+type:'');
+}
+
+async function doAuth(){
+  if(!sb){ setAuthMsg('Supabase לא מוגדר. ראה מדריך הקמה.','err'); return; }
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value;
+  if(!email || !pass){ setAuthMsg('נא למלא אימייל וסיסמה','err'); return; }
+  const btn=document.getElementById('authBtn'); btn.disabled=true; setAuthMsg('רגע...','');
+  try{
+    let res = authMode==='signup'
+      ? await sb.auth.signUp({email,password:pass})
+      : await sb.auth.signInWithPassword({email,password:pass});
+    if(res.error){ setAuthMsg(translateAuthError(res.error.message),'err'); btn.disabled=false; return; }
+    if(authMode==='signup' && !res.data.session){
+      setAuthMsg('נשלח אליך מייל אימות. אשר אותו והתחבר.','ok'); btn.disabled=false; return;
+    }
+  }catch(e){ setAuthMsg('שגיאה: '+e.message,'err'); btn.disabled=false; }
+}
+
+async function doGoogle(){
+  if(!sb){ setAuthMsg('Supabase לא מוגדר. ראה מדריך הקמה.','err'); return; }
+  try{
+    const {error} = await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
+    if(error) setAuthMsg(translateAuthError(error.message),'err');
+  }catch(e){ setAuthMsg('שגיאה: '+e.message,'err'); }
+}
+
+function translateAuthError(msg){
+  if(/Invalid login/i.test(msg)) return 'אימייל או סיסמה שגויים';
+  if(/already registered/i.test(msg)) return 'האימייל כבר רשום — נסה להתחבר';
+  if(/Password should be/i.test(msg)) return 'הסיסמה קצרה מדי (לפחות 6 תווים)';
+  if(/not enabled/i.test(msg)) return 'ההתחברות הזו לא מופעלת ב-Supabase';
+  return msg;
+}
+
+async function doLogout(){
+  if(sb) await sb.auth.signOut();
+  currentUser=null; profile=null; showLanding();
+}
+
+/* ===== טעינה/שמירה של פרופיל ===== */
+async function loadProfile(){
+  if(!sb || !currentUser) return;
+  const {data,error} = await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+  if(error){ console.error('loadProfile:',error); return; }
+  profile = data; applyProfileToUI(); updateStreak();
+}
+async function saveProfile(patch){
+  if(!sb || !currentUser) return;
+  patch.updated_at = new Date().toISOString();
+  const {error} = await sb.from('profiles').update(patch).eq('id',currentUser.id);
+  if(error) console.error('saveProfile:',error); else Object.assign(profile,patch);
+}
+async function updateStreak(){
+  if(!profile) return;
+  const today = new Date().toISOString().split('T')[0];
+  if(profile.last_active === today) return;
+  let newStreak = 1;
+  if(profile.last_active){
+    const diff = (new Date(today) - new Date(profile.last_active))/86400000;
+    if(diff===1) newStreak=(profile.streak_days||0)+1;
+    else if(diff>1) newStreak=1; else newStreak=profile.streak_days||1;
+  }
+  await saveProfile({streak_days:newStreak,last_active:today}); applyProfileToUI();
+}
+function applyProfileToUI(){
+  if(!profile) return;
+  const name = profile.display_name || 'אלוף';
+  const completed = Array.isArray(profile.completed_lessons) ? profile.completed_lessons : [];
+  const total = 11;
+  const pct = Math.round((completed.length/total)*100);
+  const hello=document.getElementById('learnHello');
+  if(hello) hello.textContent = completed.length>0 ? `שלום ${name}, בוא נמשיך מאיפה שהפסקת.` : `שלום ${name}, בוא נתחיל את המסע! 🎸`;
+  const streakEl=document.getElementById('streakBadge');
+  if(streakEl) streakEl.textContent = `🔥 ${profile.streak_days||0} ימים`;
+  const pctEl=document.getElementById('progPct'); if(pctEl) pctEl.textContent = pct+'%';
+  const ring=document.getElementById('progRing'); if(ring){ ring.style.strokeDashoffset = 201 - (201*pct/100); }
+  const ptext=document.getElementById('progText'); if(ptext) ptext.textContent = `סיימת ${completed.length} מתוך ${total} שיעורים.`;
+  // טקסט "השלב הבא" דינמי
+  const pnext=document.getElementById('progNext');
+  if(pnext){
+    const nextLesson = LESSONS.find(L=>!completed.includes(L.id));
+    pnext.textContent = nextLesson ? `השלב הבא: ${nextLesson.title}.` : 'סיימת את כל המסלול! 🏆';
+  }
+  rebuildLessonList();
+  renderLearnedChords();
+  renderAchievements();
+}
+
+/* ===== אתחול ===== */
+window.addEventListener('DOMContentLoaded', async ()=>{
+  const ok = initSupabase();
+  document.querySelectorAll('.lp-cta').forEach(b=> b.setAttribute('onclick','startFromLanding()'));
+  if(!ok) return;
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(session && session.user){ currentUser=session.user; loadProfile(); enterApp(); }
+  });
+  const {data:{session}} = await sb.auth.getSession();
+  if(session && session.user){
+    currentUser=session.user; await loadProfile();
+    if(window.location.hash.includes('access_token')) enterApp();
+  }
+});
+
+/* ===== נתוני השיעורים — הלב של מסך השיעור ===== */
+const LESSONS = [
+  {
+    id:1, title:'היכרות עם הגיטרה', subtitle:'חלקי הכלי, איך מחזיקים, כיוון', tag:'בסיס',
+    goal:'להכיר את חלקי הגיטרה, לאחוז נכון, ולכוון את המיתרים', minutes:10,
+    chord:null,
+    sections:[
+      {h:'חלקי הגיטרה', t:'הגיטרה מורכבת משלושה חלקים עיקריים: הראש (Headstock) שם נמצאים הברגים לכיוון, הצוואר (Neck) עם הסריגים, והגוף (Body) שמגביר את הצליל. ששת המיתרים נמתחים לכל אורך הכלי — מהעבה (מי נמוך) לדק (מי גבוה).'},
+      {h:'איך אוחזים', t:'שב זקוף, הנח את גוף הגיטרה על הרגל הימנית (אם אתה ימני). יד שמאל אוחזת בצוואר — האגודל מאחור, האצבעות מעל המיתרים. יד ימין פורטת מעל פתח הגוף. הכתפיים רפויות, בלי מתח.'},
+      {h:'כיוון בסיסי', t:'ששת המיתרים מכוונים (מהעבה לדק): E-A-D-G-B-E. השתמש בטאב התרגול באפליקציה — נגן כל מיתר פתוח, והאפליקציה תגיד לך אם הוא מכוון. כוונון נכון הוא הבסיס לכל צליל טוב.'},
+    ],
+    practiceChord:null, practiceHint:'עבור לטאב התרגול ובדוק שכל מיתר פתוח מכוון נכון.'
+  },
+  {
+    id:2, title:'האקורד הראשון — Em', subtitle:'אצבועים, צליל נקי', tag:'מי מינור',
+    goal:'לנגן את אקורד Em בצליל נקי וברור', minutes:12,
+    chord:{name:'Em', he:'מי מינור', f:[0,2,2,0,0,0]},
+    sections:[
+      {h:'למה דווקא Em?', t:'מי מינור הוא האקורד הקל ביותר בגיטרה — רק שתי אצבעות, וכל ששת המיתרים מתנגנים. הוא נשמע מלא ועשיר, וזו נקודת התחלה מושלמת. הרבה שירים מתחילים בו.'},
+      {h:'איפה שמים אצבעות', t:'הנח את האצבע השנייה (אמה) על המיתר החמישי בסריג השני, ואת האצבע השלישית (קמיצה) על המיתר הרביעי בסריג השני. שאר המיתרים נשארים פתוחים. לחץ חזק, קרוב לסריג אבל לא עליו.'},
+      {h:'צליל נקי', t:'פרוט לאט על כל מיתר בנפרד מלמעלה למטה. כל מיתר צריך להישמע ברור. אם משהו עמום — האצבע כנראה לא לוחצת מספיק, או נוגעת במיתר שכן. תקן וחזור.'},
+    ],
+    practiceChord:'Em', practiceNotes:['E','G','B'], practiceHint:'החזק את Em ופרוט את כל המיתרים. האפליקציה תזהה אם הצליל שייך לאקורד.'
+  },
+  {
+    id:3, title:'אקורד G + מעברים', subtitle:'שני אקורדים, החלפה', tag:'סול מז\'ור',
+    goal:'ללמוד אקורד G ולעבור בינו לבין Em בצורה חלקה', minutes:15,
+    chord:{name:'G', he:'סול מז\'ור', f:[3,2,0,0,0,3]},
+    sections:[
+      {h:'אקורד G', t:'סול מז\'ור נשמע שמח ופתוח. הוא דורש שלוש אצבעות: אמה על המיתר החמישי סריג 2, אצבע מורה... רגע, בוא נדייק: אצבע שנייה על מיתר 6 סריג 3, אצבע ראשונה על מיתר 5 סריג 2, ואצבע רביעית על מיתר 1 סריג 3.'},
+      {h:'הסוד של המעברים', t:'המעבר בין G ל-Em הוא הראשון שתלמד, והוא קריטי. הטריק: שמור את האצבעות קרובות למיתרים גם כשאתה מרים אותן. אל תרים את היד רחוק — תזיז רק את מה שצריך.'},
+      {h:'תרגול מעבר', t:'נגן G, ספור "אחת-שתיים", עבור ל-Em, ספור "אחת-שתיים", חזור. לאט בהתחלה. כשזה חלק, האץ בהדרגה. זה התרגיל שיפתח לך עשרות שירים.'},
+    ],
+    practiceChord:'G', practiceNotes:['G','B','D'], practiceHint:'תרגל מעבר בין G ל-Em. נגן כל אקורד ובדוק שהצליל נקי.'
+  },
+  {
+    id:4, title:'פריטה בסיסית', subtitle:'יד ימין, קצב 4/4', tag:'קצב',
+    goal:'לפתח קצב יציב ביד ימין בפריטה בסיסית', minutes:12,
+    chord:null,
+    sections:[
+      {h:'תפקיד יד ימין', t:'עד עכשיו התמקדנו ביד שמאל (האקורדים). עכשiu יד ימין נכנסת לתמונה — היא יוצרת את הקצב. פריטה היא תנועת מטה-מעלה על המיתרים, ביד רפויה מהפרק.'},
+      {h:'קצב 4/4', t:'רוב השירים הם בקצב 4/4 — ארבע פעימות בתיבה. נסה: מטה-מטה-מעלה-מעלה-מטה. ספור בקול "1-2-וו-3-וו-4". שמור על תנועה אחידה, כמו מטרונום.'},
+      {h:'משלבים הכל', t:'החזק אקורד Em ביד שמאל, ופרוט את תבנית הקצב ביד ימין. בהתחלה זה מרגיש כמו ללטף את הראש ולסובב את הבטן בו זמנית — אבל זה מתחבר מהר עם תרגול.'},
+    ],
+    practiceChord:'Em', practiceNotes:['E','G','B'], practiceHint:'החזק Em ותרגל את תבנית הפריטה בקצב יציב.'
+  },
+  {
+    id:5, title:'אקורד C ו-D', subtitle:'משפחת האקורדים הפתוחים', tag:'הרחבה',
+    goal:'להוסיף את C ו-D לרפרטואר ולחבר ארבעה אקורדים', minutes:16,
+    chord:{name:'C', he:'דו מז\'ור', f:[-1,3,2,0,1,0]},
+    sections:[
+      {h:'אקורד C', t:'דו מז\'ור הוא אקורד יסודי. אצבע שלישית על מיתר 5 סריג 3, אצבע שנייה על מיתר 4 סריג 2, אצבע ראשונה על מיתר 2 סריג 1. שים לב — את המיתר השישי (העבה) לא מנגנים ב-C.'},
+      {h:'אקורד D', t:'רה מז\'ור משתמש בשלוש האצבעות הראשונות בצורת משולש על המיתרים הדקים. אצבע ראשונה מיתר 3 סריג 2, אצבע שלישית מיתר 2 סריג 3, אצבע שנייה מיתר 1 סריג 2. מנגנים רק את ארבעת המיתרים הדקים.'},
+      {h:'ארבעה אקורדים יחד', t:'עכשiu יש לך Em, G, C, D — ארבעת האקורדים שמופיעים באלפי שירים. תרגל מעברים ביניהם בכל הצירופים. זה השער לנגן שירים אמיתיים.'},
+    ],
+    practiceChord:'C', practiceNotes:['C','E','G'], practiceHint:'תרגל את C ו-D, ועבור בין כל ארבעת האקורדים שלמדת.'
+  },
+  {
+    id:6, title:'השיר המלא הראשון', subtitle:'מחברים הכל יחד', tag:'אבן דרך',
+    goal:'לנגן שיר שלם מתחילתו ועד סופו', minutes:20,
+    chord:null,
+    sections:[
+      {h:'הרגע הגדול', t:'הגעת לאבן הדרך הראשונה — שיר שלם! יש לך את כל הכלים: ארבעה אקורדים ופריטה. עכשiu נחבר אותם לרצף מוזיקלי אמיתי.'},
+      {h:'איך קוראים שיר באקורדים', t:'שיר מוצג כרצף אקורדים מעל המילים (או רק האקורדים). לדוגמה: Em - G - C - D, וחוזר חלילה. אתה מנגן כל אקורד למשך מספר פעימות ועובר לבא.'},
+      {h:'תרגול השיר', t:'לך לטאב השירים, בחר שיר נחלת כלל פשוט (כמו "הבה נגילה"), ונגן את רצף האקורדים שלו לאט. אל תדאג לקצב המושלם בהתחלה — המעברים החלקים יבואו עם הזמן.'},
+    ],
+    practiceChord:null, practiceHint:'עבור לטאב השירים ונסה לנגן שיר נחלת כלל פשוט מתחילתו ועד סופו.'
+  },
+  {id:7, title:'אקורדי בארה (F)', subtitle:'הטכניקה המתקדמת', tag:'אתגר', goal:'להתמודד עם אקורד הבארה הראשון', minutes:18, chord:{name:'F',he:'פה מז\'ור',f:[1,3,3,2,1,1]}, sections:[{h:'מה זה בארה',t:'אקורד בארה הוא כשאצבע אחת לוחצת על כמה מיתרים בו-זמנית. זה הקפיצה הגדולה מהמתחיל למתקדם, ו-F הוא הראשון.'},{h:'הטכניקה',t:'האצבע הראשונה שוכבת שטוח על כל המיתרים בסריג הראשון. שאר האצבעות בונות צורת E מעליה. דורש כוח — זה מגיע עם תרגול.'},{h:'סבלנות',t:'F מתסכל בהתחלה כמעט לכולם. אל תוותר. תרגל מעט בכל יום, והשרירים יתחזקו.'}], practiceChord:'F', practiceNotes:['F','A','C'], practiceHint:'תרגל את אחיזת הבארה ב-F. שאף לצליל נקי בכל המיתרים.'},
+  {id:8, title:'אקורדי Seventh', subtitle:'צבע לאקורדים', tag:'הרחבה', goal:'להוסיף אקורדי שביעית לצליל עשיר יותר', minutes:15, chord:{name:'E7',he:'מי שביעית',f:[0,2,0,1,0,0]}, sections:[{h:'מה זה שביעית',t:'אקורדי שביעית (7) מוסיפים מתח וצבע. הם נפוצים בבלוז, ג\'אז, ופופ. E7, A7, D7 הם הנפוצים.'},{h:'קל להוסיף',t:'רוב אקורדי השביעית הם וריאציה קטנה של אקורד שאתה כבר מכיר — הסרת או הוספת אצבע אחת.'},{h:'מתי להשתמש',t:'אקורד שביעית לפני מעבר חזק מוסיף "משיכה" מוזיקלית. נסה להחליף אקורד רגיל בגרסת השביעית שלו ותשמע את ההבדל.'}], practiceChord:'E7', practiceNotes:['E','G#','B','D'], practiceHint:'תרגל את E7 והשווה לצליל של Em ו-E רגיל.'},
+  {id:9, title:'מקצבים מתקדמים', subtitle:'סינקופה ודינמיקה', tag:'קצב', goal:'לגוון את הפריטה עם מקצבים מורכבים', minutes:16, chord:null, sections:[{h:'מעבר מהבסיסי',t:'עכשiu שיש לך קצב יציב, נוסיף תחכום. סינקופה היא הדגשה של פעימות "חלשות" — מה שנותן לנגינה גרוב.'},{h:'דינמיקה',t:'לא כל פריטה באותה עוצמה. פריטות חזקות וחלשות לסירוגין יוצרות תחושה מוזיקלית חיה.'},{h:'הקשבה',t:'הקשב לשירים שאתה אוהב ונסה לזהות את תבנית הפריטה. חיקוי הוא דרך מצוינת ללמוד מקצבים.'}], practiceChord:null, practiceHint:'תרגל תבניות פריטה מגוונות על אקורד אחד, עם דגש על דינמיקה.'},
+  {id:10, title:'טכניקות יד שמאל', subtitle:'Hammer-on ו-Pull-off', tag:'אתגר', goal:'ללמוד קישוטים שהופכים נגינה למקצועית', minutes:17, chord:null, sections:[{h:'Hammer-on',t:'"דפיקה" — אתה פורט מיתר פתוח ואז "דופק" אצבע על סריג בלי לפרוט שוב. הצליל ממשיך וקופץ לתו גבוה יותר.'},{h:'Pull-off',t:'ההפך — אתה מסיר אצבע ממיתר לחוץ כך שתו נמוך יותר נשמע, בלי פריטה נוספת.'},{h:'למה זה חשוב',t:'הטכניקות האלה נותנות לנגינה זרימה וחלקות. הן הבסיס לסולואים ולנגינה מלודית.'}], practiceChord:null, practiceHint:'תרגל hammer-on ו-pull-off על המיתר הדק. שאף לצליל חלק ורציף.'},
+  {id:11, title:'נגינת אצבעות', subtitle:'פינגרפיקינג', tag:'אבן דרך', goal:'לנגן בטכניקת פיקינג במקום פריטה', minutes:20, chord:null, sections:[{h:'מה זה פינגרפיקינג',t:'במקום לפרוט את כל המיתרים יחד, אתה פורט כל מיתר בנפרד עם אצבע אחרת. זה יוצר צליל עדין ומורכב.'},{h:'הקצאת אצבעות',t:'אגודל מנגן את המיתרים העבים (בס), והאצבעות הראשונה-שנייה-שלישית מנגנות את הדקים. כל אצבע אחראית למיתר.'},{h:'תבנית קלאסית',t:'התבנית הנפוצה: אגודל-אצבע-אמה-אצבע, חוזר. נגן אותה לאט על אקורד Em ותרגיש את היופי של הצליל.'}], practiceChord:'Em', practiceNotes:['E','G','B'], practiceHint:'תרגל תבנית פינגרפיקינג בסיסית על Em.'},
+];
+
+/* פתיחת מסך שיעור */
+let currentLessonId = null;
+function openLesson(id){
+  const L = LESSONS.find(x=>x.id===id);
+  if(!L) return;
+  currentLessonId = id;
+  // האם נעול?
+  const completed = (profile && Array.isArray(profile.completed_lessons)) ? profile.completed_lessons : [];
+  const maxUnlocked = completed.length + 1; // השיעור הבא אחרי האחרון שהושלם
+  if(sb && profile && id > maxUnlocked){
+    return; // נעול — לא פותחים
+  }
+  renderLesson(L, completed.includes(id));
+  document.getElementById('v-lesson').scrollTop = 0;
+  goView('lesson');
+}
+
+function renderLesson(L, isDone){
+  const el = document.getElementById('lessonContent');
+  let html = '';
+  html += `<button class="lesson-back" onclick="goView('learn')">→ חזרה למסלול</button>`;
+  html += `<div class="lesson-hero">
+    <div class="lesson-num-big">${isDone?'✓':L.id}</div>
+    <h1>${L.title}</h1>
+    <p class="lesson-goal">🎯 ${L.goal}</p>
+    <div class="lesson-meta">⏱️ ${L.minutes} דקות · ${L.tag}</div>
+  </div>`;
+  // דיאגרמת אקורד אם יש
+  if(L.chord){
+    const fingers = CHORD_FINGERS[L.chord.name];
+    html += `<div class="lesson-chord-box">
+      <div class="lesson-chord-title">${L.chord.name} · ${L.chord.he}</div>
+      <div class="lesson-chord-svg">${chordSVG(L.chord.f, 1.8, fingers)}</div>
+      <div class="lesson-chord-hint">המספרים = איזו אצבע (1=מורה, 2=אמה, 3=קמיצה, 4=זרת). ✕ = לא מנגנים · ○ = מיתר פתוח</div>
+      <button class="play-chord-btn" onclick="playChordShape('${L.chord.f.join(',')}')">🔊 השמע את האקורד</button>
+      <a class="yt-btn" href="${ytSearch('איך מנגנים אקורד '+L.chord.name+' גיטרה לימוד')}" target="_blank" rel="noopener">▶ צפה בהדגמה ביוטיוב</a>
+    </div>`;
+  }
+  // סקשנים
+  L.sections.forEach((s,i)=>{
+    html += `<div class="lesson-section">
+      <h3><span class="ls-dot">${i+1}</span>${s.h}</h3>
+      <p>${s.t}</p>
+    </div>`;
+  });
+  // כפתור הדגמת וידאו לשיעור (לשיעורים בלי אקורד ספציפי — טכניקות)
+  if(!L.chord){
+    html += `<a class="yt-btn standalone" href="${ytSearch(L.title+' גיטרה לימוד בעברית')}" target="_blank" rel="noopener">▶ צפה בהדגמת וידאו ליוטיוב</a>`;
+  }
+  // תרגול
+  html += `<div class="lesson-practice-cta">
+    <div class="lp-icon">🎙️</div>
+    <div style="flex:1">
+      <b>תרגול מעשי</b>
+      <p>${L.practiceHint}</p>
+    </div>`;
+  if(L.practiceChord){
+    html += `<button onclick="startLessonPractice(${L.id})">תרגל</button>`;
+  } else {
+    html += `<button onclick="goView('practice')">לתרגול</button>`;
+  }
+  html += `</div>`;
+  // מאמן מוטמע
+  html += `<div class="lesson-coach">
+    <div class="lc-head">🤖 שאל את המאמן על השיעור הזה</div>
+    <div class="lc-chips">
+      <button onclick="askFromLesson(${L.id},'איך אני יודע שאני עושה את זה נכון?')">איך לדעת שזה נכון?</button>
+      <button onclick="askFromLesson(${L.id},'אני מתקשה עם זה, יש טיפ?')">אני מתקשה</button>
+      <button onclick="askFromLesson(${L.id},'כמה זמן כדאי לתרגל?')">כמה לתרגל?</button>
+    </div>
+  </div>`;
+  // כפתור סיום
+  html += `<button class="lesson-complete-btn ${isDone?'done':''}" id="lessonCompleteBtn" onclick="completeLesson(${L.id})">
+    ${isDone ? '✓ השיעור הושלם — סמן שוב' : 'סיימתי את השיעור ✓'}
+  </button>`;
+  el.innerHTML = html;
+}
+
+// סימון שיעור כהושלם — שומר ב-Supabase
+async function completeLesson(id){
+  if(!profile){
+    // מצב אורח — רק חזרה
+    goView('learn');
+    return;
+  }
+  let completed = Array.isArray(profile.completed_lessons) ? [...profile.completed_lessons] : [];
+  if(!completed.includes(id)) completed.push(id);
+  await saveProfile({completed_lessons:completed, current_lesson:Math.min(id+1,11)});
+  applyProfileToUI();
+  rebuildLessonList();
+  goView('learn');
+}
+
+// תרגול מתוך שיעור — מוביל לטאב הטיונר לכיוון הגיטרה
+function startLessonPractice(lessonId){
+  goView('practice');
+}
+
+// שאלה למאמן מתוך שיעור
+function askFromLesson(lessonId, question){
+  const L = LESSONS.find(x=>x.id===lessonId);
+  const title = L ? L.title : '';
+  goView('coach');
+  const fullQ = `(בשיעור "${title}") ${question}`;
+  setTimeout(()=>ask(fullQ), 300);
+}
+
+/* בניית רשימת השיעורים — דינמית עם נעילה והשלמה אמיתית */
+let practiceTargetChord = 'Em';
+let practiceTargetNotes = ['E','G','B'];
+
+function rebuildLessonList(){
+  const list = document.getElementById('lessonList');
+  if(!list) return;
+  const completed = (profile && Array.isArray(profile.completed_lessons)) ? profile.completed_lessons : [];
+  // במצב אורח (בלי התחברות) — מציגים הכל פתוח כדי שאפשר לנווט
+  const guest = !sb || !profile;
+  const maxUnlocked = guest ? 11 : completed.length + 1;
+
+  list.innerHTML = LESSONS.map(L=>{
+    const isDone = completed.includes(L.id);
+    const isLocked = !guest && L.id > maxUnlocked;
+    const isCurrent = !isDone && !isLocked && (L.id === maxUnlocked);
+    let cls = 'lesson' + (isDone?' done':'') + (isLocked?' locked':'');
+    const num = isDone ? '✓' : L.id;
+    const chev = isLocked ? '🔒' : '›';
+    const tag = isCurrent ? '<span class="l-tag">השיעור הנוכחי</span>' : (L.tag?`<span class="l-tag">${L.tag}</span>`:'');
+    const onclick = isLocked ? '' : `onclick="openLesson(${L.id})"`;
+    return `<div class="${cls}" ${onclick}>
+      <div class="l-num">${num}</div>
+      <div class="l-body"><b>${L.title}</b><small>${L.subtitle}</small>${tag}</div>
+      <div class="chev">${chev}</div>
+    </div>`;
+  }).join('');
+}
+
+
+(function(){const c=document.getElementById('particles'),cols=['#8b3dff','#ff2d92','#22e3ff'];
+for(let i=0;i<20;i++){const s=document.createElement('span');s.style.left=Math.random()*100+'%';
+s.style.background=cols[i%3];const sz=(3+Math.random()*5);s.style.width=s.style.height=sz+'px';
+s.style.animationDuration=(8+Math.random()*9)+'s';s.style.animationDelay=(-Math.random()*14)+'s';
+s.style.opacity=(.22+Math.random()*.38).toFixed(2);c.appendChild(s);}})();
+
+function go(v){
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  const target=document.getElementById('v-'+v);
+  if(target) target.classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
+  window.scrollTo(0,0);
+}
+function goView(v){ go(v); }
+
+/* chords */
+const CHORDS=[
+  {name:'Em',he:'מי מינור',f:[0,2,2,0,0,0]},
+  {name:'G',he:'סול',f:[3,2,0,0,0,3]},
+  {name:'C',he:'דו',f:[-1,3,2,0,1,0]},
+  {name:'D',he:'רה',f:[-1,-1,0,2,3,2]},
+];
+// finger maps: which finger (1-4) presses each string, parallel to frets array.
+// 0 = open/muted (no finger). low E -> high E.
+const CHORD_FINGERS = {
+  'Em':[0,2,3,0,0,0], 'G':[2,1,0,0,0,3], 'C':[0,3,2,0,1,0], 'D':[0,0,0,1,3,2],
+  'Am':[0,0,2,3,1,0], 'Dm':[0,0,0,2,3,1], 'E':[0,2,3,1,0,0], 'E7':[0,2,0,1,0,0],
+  'F':[1,3,4,2,1,1], 'A':[0,0,1,2,3,0], 'A7':[0,0,2,0,3,0], 'D7':[0,0,0,2,1,3],
+  'Gm':[1,3,4,1,1,1], 'B7':[0,2,1,3,0,4],
+};
+
+function chordSVG(frets, scale, fingers){
+  scale = scale || 1;
+  const W=84*scale,H=104*scale,padX=12*scale,padT=18*scale,rows=4,cols=6;
+  const gw=(W-padX*2)/(cols-1), gh=(H-padT-10*scale)/rows;
+  const sw=1.2*scale, dotR=6.5*scale, openR=3.4*scale, fs=10*scale;
+  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  // nut (thick top bar)
+  s+=`<rect x="${padX-1}" y="${padT-3*scale}" width="${(cols-1)*gw+2}" height="${3.5*scale}" rx="1.5" fill="#f4eeff"/>`;
+  // vertical strings
+  for(let c=0;c<cols;c++){const x=padX+c*gw;s+=`<line x1="${x}" y1="${padT}" x2="${x}" y2="${padT+rows*gh}" stroke="rgba(255,255,255,.25)" stroke-width="${sw}"/>`;}
+  // horizontal frets
+  for(let r=1;r<=rows;r++){const y=padT+r*gh;s+=`<line x1="${padX}" y1="${y}" x2="${padX+(cols-1)*gw}" y2="${y}" stroke="rgba(255,255,255,.18)" stroke-width="${sw}"/>`;}
+  // markers + finger numbers
+  frets.forEach((fr,i)=>{const x=padX+i*gw;
+    if(fr===-1){
+      s+=`<text x="${x}" y="${padT-6*scale}" font-size="${fs}" fill="#ff3d6e" text-anchor="middle" font-weight="bold">✕</text>`;
+    } else if(fr===0){
+      s+=`<circle cx="${x}" cy="${padT-7*scale}" r="${openR}" fill="none" stroke="#22ffa8" stroke-width="${1.6*scale}"/>`;
+    } else {
+      const y=padT+(fr-0.5)*gh;
+      s+=`<circle cx="${x}" cy="${y}" r="${dotR}" fill="url(#cg)"/>`;
+      // finger number inside the dot
+      const finger = fingers && fingers[i] ? fingers[i] : '';
+      if(finger){
+        s+=`<text x="${x}" y="${y+3.6*scale}" font-size="${8.5*scale}" fill="#fff" text-anchor="middle" font-weight="800">${finger}</text>`;
+      }
+    }
+  });
+  s+=`<defs><linearGradient id="cg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b3dff"/><stop offset="1" stop-color="#ff2d92"/></linearGradient></defs></svg>`;
+  return s;
+}
+
+// helper: get a YouTube search link for a query (safe — always returns results)
+function ytSearch(query){
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+}
+/* אקורדים שלמדת + הישגים — דינמי לפי התקדמות אמיתית */
+// מיפוי: איזה אקורד נלמד בכל שיעור
+const LESSON_CHORDS = {2:'Em', 3:'G', 5:['C','D'], 7:'F', 8:'E7'};
+const CHORD_HE = {'Em':'מי מינור','G':'סול','C':'דו','D':'רה','F':'פה','E7':'מי שביעית'};
+
+function renderLearnedChords(){
+  const cw = document.getElementById('chords');
+  const label = document.getElementById('chordsLabel');
+  if(!cw) return;
+  const completed = (profile && Array.isArray(profile.completed_lessons)) ? profile.completed_lessons : [];
+  const guest = !sb || !profile;
+
+  // אסוף את כל האקורדים מהשיעורים שהושלמו
+  let learned = [];
+  completed.forEach(lid=>{
+    const ch = LESSON_CHORDS[lid];
+    if(ch) learned = learned.concat(Array.isArray(ch) ? ch : [ch]);
+  });
+  learned = [...new Set(learned)];
+
+  // אם לא למד אקורדים (כולל מצב אורח) — הסתר את הסקשן לגמרי
+  if(learned.length === 0){
+    if(label) label.style.display='none';
+    cw.innerHTML = '';
+    cw.style.display='none';
+    return;
+  }
+  if(label) label.style.display='';
+  cw.style.display='';
+  const toShow = learned.map(n=>({name:n, he:CHORD_HE[n]||'', f:CHORD_SHAPES[n]})).filter(x=>x.f);
+  cw.innerHTML = toShow.map(c=>`<div class="chord" onclick="playChord('${c.name}')" style="cursor:pointer"><h4>${c.name}</h4><div class="he">${c.he}</div><div class="fret">${chordSVG(c.f, 1, CHORD_FINGERS[c.name])}</div></div>`).join('');
+}
+
+function renderAchievements(){
+  const row = document.getElementById('achRow');
+  if(!row) return;
+  const completed = (profile && Array.isArray(profile.completed_lessons)) ? profile.completed_lessons : [];
+  const guest = !sb || !profile;
+  const streak = profile ? (profile.streak_days||0) : 0;
+  const lessonsdone = completed.length;
+
+  // ספירת אקורדים שנלמדו
+  let chordCount = 0;
+  completed.forEach(lid=>{ const ch=LESSON_CHORDS[lid]; if(ch) chordCount += Array.isArray(ch)?ch.length:1; });
+
+  const achievements = [
+    {em:'🎸', label:'צליל ראשון', unlocked: lessonsdone >= 1},
+    {em:'🔥', label:'רצף 3 ימים', unlocked: streak >= 3},
+    {em:'🎵', label:'3 אקורדים', unlocked: chordCount >= 3},
+    {em:'⭐', label:'5 שיעורים', unlocked: lessonsdone >= 5},
+    {em:'🏆', label:'מסלול מלא', unlocked: lessonsdone >= 11},
+  ];
+  row.innerHTML = achievements.map(a=>{
+    const locked = a.unlocked ? '' : ' lock';
+    return `<div class="ach${locked}"><div class="em">${a.em}</div><small>${a.label}</small></div>`;
+  }).join('');
+}
+
+
+/* songs — chords + tempo/mood only, NO lyrics, NO melody */
+// מאגר צורות אקורדים לדיאגרמות (low E -> high E)
+const CHORD_SHAPES = {
+  'Am':[-1,0,2,2,1,0], 'Dm':[-1,-1,0,2,3,1], 'E':[0,2,2,1,0,0], 'E7':[0,2,0,1,0,0],
+  'Gm':[3,5,5,3,3,3], 'A':[-1,0,2,2,2,0], 'A7':[-1,0,2,0,2,0],
+  'C':[-1,3,2,0,1,0], 'G':[3,2,0,0,0,3], 'F':[1,3,3,2,1,1], 'D':[-1,-1,0,2,3,2],
+  'Em':[0,2,2,0,0,0], 'D7':[-1,-1,0,2,1,2], 'Bb':[-1,1,3,3,3,1],
+};
+
+/* ===== השמעת אקורד — סינתזה של צליל גיטרה ===== */
+// תדרי המיתרים הפתוחים (low E -> high E)
+const OPEN_STRING_FREQS = [82.41, 110.00, 146.83, 196.00, 246.94, 329.63];
+let audioPlayCtx = null;
+
+// חשב את תדר המיתר לפי הסריג (כל סריג = חצי טון = מכפלה ב-2^(1/12))
+function fretToFreq(stringIdx, fret){
+  if(fret < 0) return null; // מיתר מושתק
+  return OPEN_STRING_FREQS[stringIdx] * Math.pow(2, fret/12);
+}
+
+// נגן תו בודד עם צליל דמוי-גיטרה (פלאק עם דעיכה)
+function playNote(ctx, freq, startTime, duration){
+  // שני אוסילטורים לצליל עשיר יותר
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc1.type = 'triangle';
+  osc2.type = 'sine';
+  osc1.frequency.value = freq;
+  osc2.frequency.value = freq * 2; // אוקטבה מעל, עדין
+  // מעטפת: התקפה מהירה, דעיכה הדרגתית (כמו פריטת מיתר)
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(0.22, startTime + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  const gain2 = ctx.createGain();
+  gain2.gain.value = 0.15; // האוקטבה חלשה יותר
+  osc1.connect(gain);
+  osc2.connect(gain2);
+  gain2.connect(gain);
+  gain.connect(ctx.destination);
+  osc1.start(startTime);
+  osc2.start(startTime);
+  osc1.stop(startTime + duration);
+  osc2.stop(startTime + duration);
+}
+
+// נגן אקורד שלם כפריטה (מיתר אחרי מיתר מהעבה לדק)
+// מקבל שם אקורד, או מערך צורה ישיר
+function playChord(chordNameOrShape){
+  let shape = Array.isArray(chordNameOrShape) ? chordNameOrShape : CHORD_SHAPES[chordNameOrShape];
+  if(!shape) return;
+  try{
+    if(!audioPlayCtx) audioPlayCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const ctx = audioPlayCtx;
+    if(ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const strum = 0.06; // השהיה בין מיתר למיתר (פריטה)
+    let played = 0;
+    shape.forEach((fret, i)=>{
+      const freq = fretToFreq(i, fret);
+      if(freq){
+        playNote(ctx, freq, now + played*strum, 1.6);
+        played++;
+      }
+    });
+  }catch(e){ console.error('playChord failed:', e); }
+}
+
+// עזר: נגן אקורד לפי צורה מקודדת (לשימוש ב-onclick עם מערך)
+function playChordShape(shapeStr){
+  const shape = shapeStr.split(',').map(Number);
+  playChord(shape);
+}
+
+
+
+// שירי נחלת הכלל — עם מילים מלאות צמודות לאקורדים
+// כל שורה: {c:[אקורדים], t:"מילים"} — האקורדים מוצגים מעל המילים
+const SONGS_PD=[
+  {id:'pd1', t:'התקווה', a:'נפתלי הרץ אימבר · לחן עממי', mood:'ההמנון הלאומי', em:'🇮🇱', col:'linear-gradient(135deg,#22e3ff,#8b3dff)',
+   about:'ההמנון הלאומי של ישראל. המילים מאת נפתלי הרץ אימבר (1878), הלחן עממי.',
+   seq:['Dm','Dm','Gm','Dm','A','Dm','Gm','A','Dm','F','C','Bb','Dm'],
+   lyrics:[
+     {c:['Dm','Gm','Dm'], t:'כָּל עוֹד בַּלֵּבָב פְּנִימָה'},
+     {c:['Dm','A','Gm','Dm'], t:'נֶפֶשׁ יְהוּדִי הוֹמִיָּה'},
+     {c:['Dm','Gm','Dm'], t:'וּלְפַאֲתֵי מִזְרָח קָדִימָה'},
+     {c:['Dm','A','Gm','Dm'], t:'עַיִן לְצִיּוֹן צוֹפִיָּה'},
+     {c:['F','C','Bb'], t:'עוֹד לֹא אָבְדָה תִּקְוָתֵנוּ'},
+     {c:['F','C','Bb','Dm'], t:'הַתִּקְוָה בַּת שְׁנוֹת אַלְפַּיִם'},
+     {c:['Dm','C','Gm','Dm'], t:'לִהְיוֹת עַם חָפְשִׁי בְּאַרְצֵנוּ'},
+     {c:['Dm','A','Gm','Dm'], t:'אֶרֶץ צִיּוֹן וִירוּשָׁלַיִם'},
+   ]},
+  {id:'pd2', t:'מעוז צור', a:'פיוט מהמאה ה-13 · לחן עתיק', mood:'פיוט חנוכה', em:'🕎', col:'linear-gradient(135deg,#ffcf4d,#ff2d92)',
+   about:'פיוט חנוכה מסורתי מהמאה ה-13, מושר בהדלקת נרות. הבית הראשון מובא כאן.',
+   seq:['Am','Dm','Am','E','Am','Dm','E','Am'],
+   lyrics:[
+     {c:['Am','Dm','Am'], t:'מָעוֹז צוּר יְשׁוּעָתִי'},
+     {c:['E','Am'], t:'לְךָ נָאֶה לְשַׁבֵּחַ'},
+     {c:['Am','Dm','Am'], t:'תִּכּוֹן בֵּית תְּפִלָּתִי'},
+     {c:['E','Am'], t:'וְשָׁם תּוֹדָה נְזַבֵּחַ'},
+     {c:['Dm','Am'], t:'לְעֵת תָּכִין מַטְבֵּחַ'},
+     {c:['E','Am'], t:'מִצָּר הַמְנַבֵּחַ'},
+     {c:['Am','Dm'], t:'אָז אֶגְמֹר בְּשִׁיר מִזְמוֹר'},
+     {c:['E','Am'], t:'חֲנֻכַּת הַמִּזְבֵּחַ'},
+   ]},
+  {id:'pd3', t:'אדון עולם', a:'פיוט מימי הביניים', mood:'פיוט', em:'🕊️', col:'linear-gradient(135deg,#8b3dff,#22e3ff)',
+   about:'פיוט עתיק המיוחס לרבי שלמה אבן גבירול (המאה ה-11), מושר בלחנים רבים. השיר המלא מובא כאן.',
+   seq:['C','G','Am','F','C','G','C'],
+   lyrics:[
+     {c:['C','G'], t:'אֲדוֹן עוֹלָם אֲשֶׁר מָלַךְ'},
+     {c:['Am','F'], t:'בְּטֶרֶם כָּל יְצִיר נִבְרָא'},
+     {c:['C','G'], t:'לְעֵת נַעֲשָׂה בְחֶפְצוֹ כֹּל'},
+     {c:['F','C','G'], t:'אֲזַי מֶלֶךְ שְׁמוֹ נִקְרָא'},
+     {c:['C','G'], t:'וְאַחֲרֵי כִּכְלוֹת הַכֹּל'},
+     {c:['Am','F'], t:'לְבַדּוֹ יִמְלוֹךְ נוֹרָא'},
+     {c:['C','G'], t:'וְהוּא הָיָה וְהוּא הֹוֶה'},
+     {c:['F','C','G'], t:'וְהוּא יִהְיֶה בְּתִפְאָרָה'},
+     {c:['C','G'], t:'וְהוּא אֶחָד וְאֵין שֵׁנִי'},
+     {c:['Am','F'], t:'לְהַמְשִׁילוֹ וּלְהַחְבִּירָה'},
+     {c:['C','G'], t:'בְּלִי רֵאשִׁית בְּלִי תַכְלִית'},
+     {c:['F','C','G'], t:'וְלוֹ הָעֹז וְהַמִּשְׂרָה'},
+     {c:['C','G'], t:'וְהוּא אֵלִי וְחַי גּוֹאֲלִי'},
+     {c:['Am','F'], t:'וְצוּר חֶבְלִי בְּיוֹם צָרָה'},
+     {c:['C','G'], t:'וְהוּא נִסִּי וּמָנוּסִי'},
+     {c:['F','C','G'], t:'מְנָת כּוֹסִי בְּיוֹם אֶקְרָא'},
+     {c:['C','G'], t:'בְּיָדוֹ אַפְקִיד רוּחִי'},
+     {c:['Am','F'], t:'בְּעֵת אִישַׁן וְאָעִירָה'},
+     {c:['C','G'], t:'וְעִם רוּחִי גְּוִיָּתִי'},
+     {c:['F','C','G','C'], t:'אֲדֹנָי לִי וְלֹא אִירָא'},
+   ]},
+  {id:'pd4', t:'חד גדיא', a:'פיוט מסורתי · ההגדה', mood:'פסח · שירת רבים', em:'🐐', col:'linear-gradient(135deg,#22ffa8,#22e3ff)',
+   about:'פיוט ארמי-עברי מההגדה של פסח, מושר בסוף הסדר. שיר מצטבר — כל בית מוסיף שורה.',
+   seq:['Am','E','Am','Dm','E','Am'],
+   lyrics:[
+     {c:['Am','E','Am'], t:'חַד גַּדְיָא, חַד גַּדְיָא'},
+     {c:['Dm','Am'], t:'דְּזַבִּין אַבָּא בִּתְרֵי זוּזֵי'},
+     {c:['E','Am'], t:'חַד גַּדְיָא, חַד גַּדְיָא'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא שׁוּנְרָא וְאָכְלָה לְגַדְיָא'},
+     {c:['Am'], t:'דְּזַבִּין אַבָּא בִּתְרֵי זוּזֵי'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא כַלְבָּא וְנָשַׁךְ לְשׁוּנְרָא'},
+     {c:['Am'], t:'דְּאָכְלָה לְגַדְיָא'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא חוּטְרָא וְהִכָּה לְכַלְבָּא'},
+     {c:['Am'], t:'דְּנָשַׁךְ לְשׁוּנְרָא דְּאָכְלָה לְגַדְיָא'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא נוּרָא וְשָׂרַף לְחוּטְרָא'},
+     {c:['Am'], t:'דְּהִכָּה לְכַלְבָּא...'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא מַיָּא וְכָבָה לְנוּרָא'},
+     {c:['Am'], t:'דְּשָׂרַף לְחוּטְרָא...'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא תוֹרָא וְשָׁתָה לְמַיָּא'},
+     {c:['Am'], t:'דְּכָבָה לְנוּרָא...'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא הַשּׁוֹחֵט וְשָׁחַט לְתוֹרָא'},
+     {c:['Am'], t:'דְּשָׁתָה לְמַיָּא...'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא מַלְאַךְ הַמָּוֶת וְשָׁחַט לַשּׁוֹחֵט'},
+     {c:['Am'], t:'דְּשָׁחַט לְתוֹרָא...'},
+     {c:[], t:''},
+     {c:['Am','E'], t:'וְאָתָא הַקָּדוֹשׁ בָּרוּךְ הוּא'},
+     {c:['Am'], t:'וְשָׁחַט לְמַלְאַךְ הַמָּוֶת'},
+     {c:['Dm','E','Am'], t:'חַד גַּדְיָא, חַד גַּדְיָא'},
+   ]},
+  {id:'pd5', t:'הבה נגילה', a:'לחן חסידי עממי', mood:'שמח · מואץ בהדרגה', em:'🎉', col:'linear-gradient(135deg,#ff2d92,#ffcf4d)',
+   about:'שיר שמחה ישראלי מוכר בכל העולם. הלחן חסידי-עממי. מתחילים לאט ומאיצים.',
+   seq:['Dm','Gm','Dm','A7','Dm','Gm','A7','Dm'],
+   lyrics:[
+     {c:['Dm'], t:'הָבָה נָגִילָה'},
+     {c:['Gm','Dm'], t:'הָבָה נָגִילָה'},
+     {c:['A7','Dm'], t:'הָבָה נָגִילָה וְנִשְׂמְחָה'},
+     {c:['Dm'], t:'הָבָה נְרַנְּנָה'},
+     {c:['Gm','Dm'], t:'הָבָה נְרַנְּנָה'},
+     {c:['A7','Dm'], t:'הָבָה נְרַנְּנָה וְנִשְׂמְחָה'},
+     {c:['Gm'], t:'עוּרוּ עוּרוּ אַחִים'},
+     {c:['Dm'], t:'עוּרוּ אַחִים בְּלֵב שָׂמֵחַ'},
+   ]},
+];
+function pdEl(s){
+  const tag=`<span class="diff d1">פתוח</span>`;
+  return `<div class="song" onclick="openSong('${s.id}')"><div class="cover" style="background:${s.col}">${s.em}</div>
+    <div class="song-body"><b>${s.t}</b><small>${s.a}</small>
+    <div style="font-size:11px;color:var(--good);font-weight:700;margin-top:3px">${s.mood}</div></div>${tag}</div>`;
+}
+document.getElementById('songsPD').innerHTML=SONGS_PD.map(pdEl).join('');
+
+/* ===== מסך שיר פנימי ===== */
+let currentSongId = null;
+function openSong(id){
+  const S = SONGS_PD.find(x=>x.id===id);
+  if(!S) return;
+  currentSongId = id;
+  renderSong(S);
+  go('song');
+}
+function renderSong(S){
+  const el = document.getElementById('songContent');
+  // אקורדים ייחודיים בשיר
+  const uniqueChords = [...new Set(S.seq)];
+  let html = '';
+  html += `<button class="lesson-back" onclick="go('songs')">→ חזרה לשירים</button>`;
+  html += `<div class="song-hero" style="background:${S.col}">
+    <div class="song-hero-em">${S.em}</div>
+    <h1>${S.t}</h1>
+    <p>${S.a}</p>
+  </div>`;
+  html += `<div class="lesson-section"><h3><span class="ls-dot">♪</span>על השיר</h3><p>${S.about}</p></div>`;
+  // דיאגרמות אקורדים — לחיצים להשמעה
+  html += `<div class="section-label" style="margin-top:22px">האקורדים בשיר</div>`;
+  html += `<div class="song-chords">`;
+  uniqueChords.forEach(ch=>{
+    const shape = CHORD_SHAPES[ch];
+    const fingers = CHORD_FINGERS[ch];
+    if(shape){
+      html += `<div class="song-chord" onclick="playChord('${ch}')" style="cursor:pointer"><div class="song-chord-name">${ch}</div><div>${chordSVG(shape, 1.3, fingers)}</div><div class="song-chord-play">🔊 השמע</div></div>`;
+    }
+  });
+  html += `</div>`;
+  html += `<div class="lesson-chord-hint" style="text-align:center;margin-top:10px">לחצו על אקורד כדי לשמוע אותו · המספרים = איזו אצבע (1=מורה, 2=אמה, 3=קמיצה, 4=זרת)</div>`;
+  // מילים צמודות לאקורדים
+  if(S.lyrics && S.lyrics.length){
+    html += `<div class="section-label" style="margin-top:22px">מילים ואקורדים</div>`;
+    html += `<div class="song-lyrics">`;
+    S.lyrics.forEach(line=>{
+      // שורה ריקה = רווח בין בתים
+      if(!line.t && (!line.c || !line.c.length)){
+        html += `<div class="ly-spacer"></div>`;
+        return;
+      }
+      // שורת אקורדים מעל שורת המילים
+      const chordRow = (line.c||[]).map(ch=>`<span class="ly-chord">${ch}</span>`).join('');
+      html += `<div class="ly-line">
+        <div class="ly-chords">${chordRow}</div>
+        <div class="ly-text">${line.t}</div>
+      </div>`;
+    });
+    html += `</div>`;
+    html += `<div class="lesson-chord-hint" style="text-align:center;margin-top:8px">האקורדים מעל השורה — החליפו אקורד כשמגיעים למילה שמתחתיו</div>`;
+  }
+  // כפתור הדגמת וידאו
+  html += `<a class="yt-btn standalone" href="${ytSearch(S.t+' גיטרה אקורדים לימוד')}" target="_blank" rel="noopener">▶ צפה בהדגמת השיר ביוטיוב</a>`;
+  // כפתור תרגול
+  html += `<button class="song-practice-btn" onclick="startSongPractice('${S.id}')">▶ תרגל אקורד-אחר-אקורד</button>`;
+  // מאמן מוטמע
+  html += `<div class="lesson-coach" style="margin-top:18px">
+    <div class="lc-head">🤖 שאל את המאמן על השיר</div>
+    <div class="lc-chips">
+      <button onclick="askFromSong('${S.id}','איך לעבור חלק בין האקורדים בשיר?')">מעברים חלקים</button>
+      <button onclick="askFromSong('${S.id}','באיזה קצב לנגן?')">קצב הנגינה</button>
+      <button onclick="askFromSong('${S.id}','איך לתרגל את השיר נכון?')">איך לתרגל</button>
+    </div>
+  </div>`;
+  el.innerHTML = html;
+}
+
+// מצב תרגול שיר — אקורדים אחד-אחרי-השני
+let songPracticeTimer = null;
+let songPracticeIdx = 0;
+function startSongPractice(id){
+  const S = SONGS_PD.find(x=>x.id===id);
+  if(!S) return;
+  songPracticeIdx = 0;
+  go('songplay');
+  renderSongPlayStep(S);
+}
+function renderSongPlayStep(S){
+  const el = document.getElementById('songPlayContent');
+  const ch = S.seq[songPracticeIdx];
+  const shape = CHORD_SHAPES[ch];
+  const next = songPracticeIdx < S.seq.length-1 ? S.seq[songPracticeIdx+1] : null;
+  const progress = Math.round(((songPracticeIdx+1)/S.seq.length)*100);
+  let html = '';
+  html += `<button class="lesson-back" onclick="stopSongPractice()">→ סיום תרגול</button>`;
+  html += `<div style="text-align:center;margin-top:10px"><div style="font-size:14px;color:var(--muted)">${S.t}</div>`;
+  html += `<div style="font-size:13px;color:var(--cyan);margin-top:4px">אקורד ${songPracticeIdx+1} מתוך ${S.seq.length}</div></div>`;
+  // אקורד נוכחי גדול
+  html += `<div class="songplay-current">
+    <div class="songplay-chord-name">${ch}</div>
+    <div style="display:flex;justify-content:center;margin:10px 0">${chordSVG(shape, 2, CHORD_FINGERS[ch])}</div>
+    <button class="play-chord-btn" onclick="playChord('${ch}')" style="margin:4px auto 0">🔊 השמע אקורד</button>
+    ${next ? `<div class="songplay-next">הבא: <b>${next}</b></div>` : '<div class="songplay-next">🎉 האקורד האחרון!</div>'}
+  </div>`;
+  // פס התקדמות
+  html += `<div class="songplay-bar"><div class="songplay-bar-fill" style="width:${progress}%"></div></div>`;
+  // כפתורי ניווט
+  html += `<div class="songplay-nav">`;
+  if(songPracticeIdx>0) html += `<button onclick="songStep(-1)">← הקודם</button>`;
+  if(songPracticeIdx < S.seq.length-1) html += `<button class="primary" onclick="songStep(1)">הבא →</button>`;
+  else html += `<button class="primary" onclick="stopSongPractice()">סיימתי! ✓</button>`;
+  html += `</div>`;
+  el.innerHTML = html;
+}
+function songStep(dir){
+  const S = SONGS_PD.find(x=>x.id===currentSongId);
+  if(!S) return;
+  songPracticeIdx = Math.max(0, Math.min(S.seq.length-1, songPracticeIdx+dir));
+  renderSongPlayStep(S);
+}
+function stopSongPractice(){
+  go('song');
+}
+function askFromSong(id, question){
+  const S = SONGS_PD.find(x=>x.id===id);
+  const title = S ? S.t : '';
+  go('coach');
+  setTimeout(()=>ask(`(בשיר "${title}") ${question}`), 300);
+}
+
+
+/* ===== COACH — now calls the Netlify Function backend ===== */
+let chatHistory=[]; // {role, content}
+let busy=false;
+
+function pushBubble(text,who){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');d.className='msg '+who;d.textContent=text;
+  c.appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});
+  return d;
+}
+function showTyping(){
+  const c=document.getElementById('chat');
+  const d=document.createElement('div');d.className='msg bot typing';
+  d.innerHTML='<span class="dot"></span><span class="dot" style="animation-delay:.15s"></span><span class="dot" style="animation-delay:.3s"></span>';
+  c.appendChild(d);d.scrollIntoView({behavior:'smooth',block:'end'});return d;
+}
+
+async function ask(q){
+  if(busy)return;
+  const quick=document.getElementById('quick');if(quick)quick.style.display='none';
+  pushBubble(q,'me');
+  chatHistory.push({role:'user',content:q});
+  busy=true;
+  const typing=showTyping();
+  try{
+    const res=await fetch(COACH_API_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages:chatHistory})
+    });
+    const data=await res.json();
+    typing.remove();
+    const reply=data.reply||'מצטער, לא הצלחתי לענות כרגע. נסה שוב.';
+    pushBubble(reply,'bot');
+    chatHistory.push({role:'assistant',content:reply});
+  }catch(e){
+    typing.remove();
+    pushBubble('אופס — הייתה תקלה בחיבור לשרת. נסה שוב בעוד רגע.','bot');
+  }finally{busy=false;}
+}
+function sendChat(){const i=document.getElementById('chatIn');const v=i.value.trim();if(!v)return;i.value='';ask(v);}
+
+/* ===== TUNER — manual string-selection tuning ===== */
+const NOTE=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const GUITAR_STRINGS = [
+  {n:'E', label:'מי נמוך', freq:82.41},
+  {n:'A', label:'לה', freq:110.00},
+  {n:'D', label:'רה', freq:146.83},
+  {n:'G', label:'סול', freq:196.00},
+  {n:'B', label:'סי', freq:246.94},
+  {n:'E', label:'מי גבוה', freq:329.63},
+];
+// build string SELECTOR buttons — user picks which string to tune
+let tSelectedIdx = null;  // index into GUITAR_STRINGS of the chosen string
+(function(){
+  const grid=document.getElementById('stringSelect');
+  if(grid){
+    // show low E (index 0) on the right, high E (index 5) on the left for RTL feel
+    grid.innerHTML = GUITAR_STRINGS.map((s,i)=>
+      `<button class="str-pick" data-idx="${i}" onclick="selectString(${i})"><b>${s.n}</b><small>${s.label}</small></button>`
+    ).join('');
+  }
+})();
+
+function selectString(idx){
+  tSelectedIdx = idx;
+  tResetState();
+  document.querySelectorAll('#stringSelect .str-pick').forEach(b=>{
+    b.classList.toggle('active', parseInt(b.dataset.idx)===idx);
+  });
+  const s = GUITAR_STRINGS[idx];
+  const tt=document.getElementById('tTarget');
+  if(tt) tt.textContent = `מכוונים: ${s.n} (${s.label}) · ${s.freq.toFixed(1)}Hz`;
+  // reset display
+  tNote.textContent='–'; tNote.style.color='var(--muted)';
+  tNoteName.textContent='פרטו את המיתר';
+  tNeedle.style.left='50%'; tNeedle.style.background='var(--ink)';
+  tCents.textContent='';
+  tPill.textContent = tRun ? 'פרטו את המיתר…' : 'הפעילו מיקרופון';
+  tPill.style.color='var(--muted)'; tPill.style.borderColor='var(--stroke)';
+}
+
+// Pitch detection via Pitchy library (loaded as ESM module below, exposed on window)
+// Falls back gracefully if library hasn't loaded yet.
+function detectPitchClarity(buf, sr){
+  // returns [pitchHz, clarity] using Pitchy if available
+  if(window.pitchyDetector && window.pitchyDetector.findPitch){
+    try{ return window.pitchyDetector.findPitch(buf, sr); }
+    catch(e){ return [-1, 0]; }
+  }
+  return [-1, 0]; // library not ready
+}
+
+let tCtx,tAnalyser,tStream,tRaf,tRun=false;
+const tBuf=new Float32Array(2048);
+const tNote=document.getElementById('tNote'), tNoteName=document.getElementById('tNoteName'),
+      tNeedle=document.getElementById('tNeedle'), tCents=document.getElementById('tCents'),
+      tPill=document.getElementById('tPill'), tToggle=document.getElementById('tToggle'),
+      tErr=document.getElementById('tErr');
+const NOTE_HE_FULL={'C':'דו','C#':'דו#','D':'רה','D#':'רה#','E':'מי','F':'פה','F#':'פה#','G':'סול','G#':'סול#','A':'לה','A#':'לה#','B':'סי'};
+
+// stabilization state
+let tHistory = [];           // recent valid pitches (for median)
+let tLockedString = null;    // which string we're locked onto
+let tLockFrames = 0;         // how many frames we've stayed near it
+let tDisplayHz = 0;          // smoothed display value
+let tFrameCount = 0;         // for throttling UI updates
+let tLastValidTime = 0;      // timestamp of last clear pitch
+
+const STRING_FREQS = [82.41, 110.00, 146.83, 196.00, 246.94, 329.63];
+
+// snap a raw pitch toward the SELECTED string's frequency, correcting octave errors.
+// Because we know which string the user is tuning, we anchor to its target — this
+// removes confusion between neighbouring strings (e.g. E vs A).
+function snapToTarget(hz, targetFreq){
+  // consider octave variants of the detected pitch; pick the one closest to target
+  const candidates = [hz, hz/2, hz*2, hz/3, hz*3, hz*1.5, hz/1.5];
+  let bestHz = hz, bestDist = Infinity;
+  candidates.forEach(c=>{
+    if(c < 60 || c > 400) return;
+    const dist = Math.abs(1200*Math.log2(c/targetFreq)); // cents from target
+    if(dist < bestDist){ bestDist = dist; bestHz = c; }
+  });
+  return { hz: bestHz, distCents: bestDist === Infinity ? 9999 : (1200*Math.log2(bestHz/targetFreq)) };
+}
+
+function median(arr){
+  if(!arr.length) return 0;
+  const s=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(s.length/2);
+  return s.length%2 ? s[m] : (s[m-1]+s[m])/2;
+}
+
+function tResetState(){
+  tHistory=[]; tDisplayHz=0; tFrameCount=0; tLastValidTime=0;
+}
+
+function tShowListening(){
+  if(tSelectedIdx===null){
+    tNote.textContent='–'; tNote.style.color='var(--muted)';
+    tNoteName.textContent='בחרו מיתר';
+    tPill.textContent='בחרו מיתר למעלה'; 
+  } else {
+    tNote.textContent='–'; tNote.style.color='var(--muted)';
+    tNoteName.textContent='פרטו את המיתר';
+    tPill.textContent= (window.pitchyDetector ? 'פרטו את המיתר…' : 'טוען מנוע זיהוי…');
+  }
+  tNeedle.style.left='50%'; tNeedle.style.background='var(--ink)';
+  tCents.textContent='';
+  tPill.style.color='var(--muted)'; tPill.style.borderColor='var(--stroke)';
+}
+
+function tLoop(){
+  tRaf=requestAnimationFrame(tLoop);
+  if(!tAnalyser) return;
+
+  // must have a selected string
+  if(tSelectedIdx===null){ return; }
+  const target = GUITAR_STRINGS[tSelectedIdx];
+
+  tAnalyser.getFloatTimeDomainData(tBuf);
+  const [rawF, clarity] = detectPitchClarity(tBuf, tCtx.sampleRate);
+  const now = performance.now();
+
+  const valid = rawF && rawF>0 && clarity >= 0.9 && rawF>55 && rawF<800;
+
+  if(valid){
+    const snapped = snapToTarget(rawF, target.freq);
+    // only accept if it's within ~150 cents of the target (1.5 semitones).
+    // beyond that, the user is way off or it's a wrong harmonic — but we still
+    // show it so they get feedback when very out of tune.
+    tHistory.push(snapped.hz);
+    if(tHistory.length > 10) tHistory.shift();
+    tLastValidTime = now;
+  } else {
+    if(now - tLastValidTime > 300){ tResetState(); tShowListening(); return; }
+    return;
+  }
+
+  if(tHistory.length < 5){ return; }
+
+  const stableHz = median(tHistory);
+  tDisplayHz = tDisplayHz ? tDisplayHz*0.75 + stableHz*0.25 : stableHz;
+
+  tFrameCount++;
+  if(tFrameCount % 3 !== 0) return;
+
+  // cents relative to the SELECTED target string
+  const cents = Math.round(1200*Math.log2(tDisplayHz/target.freq));
+  const inTune=Math.abs(cents)<=4, close=Math.abs(cents)<=15;
+
+  tNote.textContent = target.n;
+  tNote.style.color = inTune?'var(--good)':(close?'var(--cyan)':'var(--ink)');
+  tNoteName.textContent = target.label;
+  const pct=50+Math.max(-50,Math.min(50,cents));
+  tNeedle.style.left=pct+'%';
+  tNeedle.style.background = inTune?'var(--good)':(close?'var(--cyan)':'var(--magenta)');
+  tCents.textContent=(cents>0?'+':'')+cents+' סנט';
+  if(inTune){ tPill.textContent='✓ מכוון!'; tPill.style.color='var(--good)'; tPill.style.borderColor='var(--good)'; }
+  else if(cents<0){ tPill.textContent='↑ נמוך — הדקו את הבורג'; tPill.style.color='var(--cyan)'; tPill.style.borderColor='var(--stroke)'; }
+  else { tPill.textContent='↓ גבוה — שחררו את הבורג'; tPill.style.color='var(--cyan)'; tPill.style.borderColor='var(--stroke)'; }
+}
+async function tStart(){
+  try{
+    tErr.textContent='';
+    if(tSelectedIdx===null){ tErr.textContent='בחרו קודם מיתר לכיוון.'; return; }
+    if(!window.pitchyDetector){ tErr.textContent='מנוע הזיהוי עדיין נטען — נסו שוב בעוד רגע.'; }
+    tCtx=new(window.AudioContext||window.webkitAudioContext)();
+    tStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    const src=tCtx.createMediaStreamSource(tStream);
+    tAnalyser=tCtx.createAnalyser(); tAnalyser.fftSize=2048;
+    src.connect(tAnalyser); tRun=true;
+    tToggle.textContent='⏹ עצור'; tLoop();
+  }catch(e){ tErr.textContent='לא ניתן לגשת למיקרופון. אשרו הרשאה ונסו שוב.'; }
+}
+function tStop(){
+  tRun=false; cancelAnimationFrame(tRaf);
+  if(tStream) tStream.getTracks().forEach(t=>t.stop());
+  if(tCtx) tCtx.close();
+  tAnalyser=null; tResetState();
+  tToggle.textContent='🎙️ הפעל מיקרופון';
+  tNote.textContent='–'; tNote.style.color='var(--muted)';
+  tNoteName.textContent = tSelectedIdx!==null ? 'פרטו את המיתר' : 'בחרו מיתר';
+  tNeedle.style.left='50%'; tNeedle.style.background='var(--ink)';
+  tCents.textContent=''; tPill.textContent='הפעילו מיקרופון'; tPill.style.color='var(--muted)'; tPill.style.borderColor='var(--stroke)';
+}
+if(tToggle) tToggle.addEventListener('click',()=>tRun?tStop():tStart());
+
+/* אתחול במצב אורח (אם אין Supabase) */
+rebuildLessonList();
+renderLearnedChords();
+renderAchievements();
+</script>
+</body>
+</html>
+
